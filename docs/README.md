@@ -1,0 +1,5 @@
+# Documentation
+
+- [Architecture](./ARCHITECTURE.md)
+
+🛠️ 🛠️ 🛠️
