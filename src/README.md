@@ -1,4 +1,4 @@
-# Web Application
+# Web source code
 
 The front-end of the amazing **Stickian** game!
 
