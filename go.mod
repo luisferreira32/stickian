@@ -1,3 +1,3 @@
 module github.com/luisferreira32/stickian
 
-go 1.25.7
+go 1.25
