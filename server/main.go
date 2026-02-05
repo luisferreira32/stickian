@@ -11,12 +11,6 @@ import (
 	"time"
 )
 
-const (
-	// TODO: parameterize with env variables
-	serverPort = "8080"
-	address    = "localhost:" + serverPort
-)
-
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
