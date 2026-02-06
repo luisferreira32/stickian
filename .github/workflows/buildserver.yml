@@ -1,5 +1,4 @@
-name: Build & Test
-
+name: Build Server
 on:
   push:
     branches: [ main ]
