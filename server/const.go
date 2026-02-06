@@ -2,6 +2,7 @@ package main
 
 const (
 	// TODO: parameterize with env variables
-	serverPort = "8080"
-	address    = "localhost:" + serverPort
+	serverPort  = "8080"
+	address     = "localhost:" + serverPort
+	development = true
 )
