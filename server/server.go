@@ -11,7 +11,7 @@ import (
 
 func run(ctx context.Context, address string) {
 	middlewares := []func(http.HandlerFunc) http.HandlerFunc{
-		panicMiddleware(),
+		panicMiddleware(), // always chain the panic middleware first to prevent panics in other middlewares from crashing the server
 	}
 	if development {
 		middlewares = append(middlewares, loggingMiddleware())
