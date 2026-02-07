@@ -21,3 +21,7 @@ func Panic(w http.ResponseWriter, r *http.Request) {
 func Hello(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("hello world\n"))
 }
+
+func City(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "server/static/city.html")
+}
