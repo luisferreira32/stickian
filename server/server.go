@@ -20,6 +20,7 @@ func run(ctx context.Context, address string) {
 	mux := http.NewServeMux()
 
 	// define all endpoints
+	mux.HandleFunc("/", chainMiddleware(http.FileServer(http.Dir("dist")).ServeHTTP, compressionMiddleware()))
 	mux.HandleFunc("/echo", chainMiddleware(dummy.Echo, middlewares...))
 	mux.HandleFunc("GET /hello", chainMiddleware(dummy.Hello, middlewares...))
 	mux.HandleFunc("POST /panic", chainMiddleware(dummy.Panic, middlewares...))

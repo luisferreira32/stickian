@@ -41,6 +41,9 @@ coverage/
 
 # production
 build/
+dist/
+stickian-server
+bundle.tar.gz
 
 # misc
 .DS_Store
