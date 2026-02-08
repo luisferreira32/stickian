@@ -41,5 +41,5 @@ This step depends where you want to run the project. If you just want to test it
 5. Run it on the host
 
 ```bash
-tar xvf bundle.tar.gz && stickian-server
+tar xvf bundle.tar.gz && ./stickian-server
 ```
