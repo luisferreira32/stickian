@@ -35,18 +35,6 @@ func panicMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 func loggingMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 	return func(f http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-
-			//use just in case some CORS shenanigans are happening
-
-			/*w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-			if r.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}*/
-
 			log.Printf("%s %s\n", r.Method, r.URL.Path)
 			f(w, r)
 		}

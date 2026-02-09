@@ -19,9 +19,6 @@ func run(ctx context.Context, address string) {
 
 	mux := http.NewServeMux()
 
-	fs := http.FileServer((http.Dir("server/static")))
-	mux.Handle("GET /static/", http.StripPrefix("/static/", fs))
-
 	// define all endpoints
 	mux.HandleFunc("/echo", chainMiddleware(dummy.Echo, middlewares...))
 	mux.HandleFunc("GET /hello", chainMiddleware(dummy.Hello, middlewares...))

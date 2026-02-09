@@ -25,9 +25,6 @@ func Hello(w http.ResponseWriter, r *http.Request) {
 
 func City(w http.ResponseWriter, r *http.Request) {
 
-	r.Header.Del("If-None-Match")
-	r.Header.Del("If-Modified-Since")
-
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")

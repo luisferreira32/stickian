@@ -20,7 +20,6 @@ function City() {
         fetch('/api/city', {cache: 'no-store'})
             .then(res => res.json())
             .then(data => {
-                console.log('City JSON', data)
                 setCity(data)
             })
             .catch(console.error)
