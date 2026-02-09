@@ -1,6 +1,7 @@
 package dummy
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 )
@@ -23,5 +24,27 @@ func Hello(w http.ResponseWriter, r *http.Request) {
 }
 
 func City(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "server/static/city.html")
+
+	r.Header.Del("If-None-Match")
+	r.Header.Del("If-Modified-Since")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+
+	w.WriteHeader(http.StatusOK)
+
+	//Json Example sent. Mess with it to confirm the React App receives it :D
+
+	json.NewEncoder(w).Encode(map[string]any{
+		"cityName": "Stick City",
+		"buildings": map[string]int{
+			"city_Hall":    4,
+			"farm":         2,
+			"quarry":       2,
+			"lumbermill":   2,
+			"crystal_Mine": 3,
+		},
+	})
 }
