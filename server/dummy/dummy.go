@@ -43,5 +43,12 @@ func City(w http.ResponseWriter, r *http.Request) {
 			"lumbermill":   2,
 			"crystal_Mine": 3,
 		},
+		"resources": map[string]int{
+			"population": 45,
+			"stone":      215,
+			"sticks":     312,
+			"crystal":    145,
+			"gold":       18,
+		},
 	})
 }
