@@ -6,5 +6,5 @@ import City from './City.tsx'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <City />
-  </StrictMode>,
+  </StrictMode>
 )

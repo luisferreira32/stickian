@@ -1,173 +1,176 @@
-    html, body {
-        margin: 0;
-        background: #2b2b2b;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        height: 100%;
-        font-family: sans-serif;
-        overflow: hidden;
-    }
+html,
+body {
+  margin: 0;
+  background: #2b2b2b;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  font-family: sans-serif;
+  overflow: hidden;
+}
 
-    .cityName {
-        position: absolute;
-        top: 16px;
-        left: 50%;
-        transform: translateX(-50%);
+.cityName {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
 
-        font-size: 20px;
-        font-weight: bold;
-        color: #fff;
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
 
-        padding: 6px 14px;
-        background: rgba(0, 0, 0, 0.35);
-        border-radius: 12px;
-    }
-        
-    .city {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+}
 
-        background: linear-gradient(#4c9f50, #2e6b34);
-        border: 4px solid #5a3b1f;
-        border-radius: 10px;
+.city {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
 
-        box-sizing: border-box;
-        overflow: hidden;
-    }
+  background: linear-gradient(#4c9f50, #2e6b34);
+  border: 4px solid #5a3b1f;
+  border-radius: 10px;
 
-    .level {
-        font-size: 11px;
-        background: rgba(0,0,0,0.25);
-        color: #fff;
-        padding: 2px 6px;
-        border-radius: 10px;
-        width: fit-content;
-        margin: 0 auto;
-    }   
-    
-    /* Generic building */
-    .building {
-        --hover-y: 0px;
-        transform: translateY(var(--hover-y));
+  box-sizing: border-box;
+  overflow: hidden;
+}
 
-        position: absolute;
-        width: 100px;
-        min-height: 70px;
+.level {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 10px;
+  width: fit-content;
+  margin: 0 auto;
+}
 
-        background: #c9b38c;
-        border: 2px solid #5a3b1f;
-        border-radius: 6px;
+/* Generic building */
+.building {
+  --hover-y: 0px;
+  transform: translateY(var(--hover-y));
 
-        text-align: center;
-        line-height: 70px;
-        font-size: 12px;
-        cursor: pointer;
+  position: absolute;
+  width: 100px;
+  min-height: 70px;
 
-        box-shadow: 0 4px 0 #3a2715;
-        transition: transform 0.1s, box-shadow 0.1s;
+  background: #c9b38c;
+  border: 2px solid #5a3b1f;
+  border-radius: 6px;
 
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
+  text-align: center;
+  line-height: 70px;
+  font-size: 12px;
+  cursor: pointer;
 
-        padding: 6px;
-        line-height: 1.2;
-        gap: 4px; 
-    }
+  box-shadow: 0 4px 0 #3a2715;
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s;
 
-    /* Building name */
-    .building-name {
-        font-size: 13px;
-    }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
 
-    /* Level text */
-    .building-level {
-        font-size: 10px;
-        opacity: 0.8;
-        margin-top: 2px;
-    }
+  padding: 6px;
+  line-height: 1.2;
+  gap: 4px;
+}
 
-    .building:hover {
-        --hover-y: -3px;
-        box-shadow: 0 7px 0 #3a2715;
-    }
-    
-    /* Individual building positions */
-    .city_Hall {
-        top: 50%;
-        left: 50%;
+/* Building name */
+.building-name {
+  font-size: 13px;
+}
 
-        transform: translate(-50%, -50%) translateY(var(--hover-y));
+/* Level text */
+.building-level {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
 
-        width: 200px;
-        height: 100px;
+.building:hover {
+  --hover-y: -3px;
+  box-shadow: 0 7px 0 #3a2715;
+}
 
-        background: #d9c28f;
-    }
-    
-    .lumbermill {
-        top: 10%;
-        left: 5%;
-        background: #b88a5a;
-    }
-    
-    .quarry {
-        bottom: 5%;
-        right: 5%;
-        background: #8fb3c9;
-    }
-    
-    .crystal_Mine {
-        top: 10%;
-        right: 5%;
-        background: #e6e0c8;
-    }
-    
-    .farm {
-        bottom: 5%;
-        left: 5%;
-        background: #9fc97a;
-    }
+/* Individual building positions */
+.city_Hall {
+  top: 50%;
+  left: 50%;
 
-    .resourceBar {
-        position: absolute;
-        top: 16px;
-        right: 16px;
+  transform: translate(-50%, -50%) translateY(var(--hover-y));
 
-        display: flex;
-        align-items: center;
-        gap: 10px;
+  width: 200px;
+  height: 100px;
 
-        padding: 6px 10px;
-        background: rgba(0, 0, 0, 0.35);
-        border-radius: 12px;
+  background: #d9c28f;
+}
 
-        color: #fff;
-        font-size: 12px;
+.lumbermill {
+  top: 10%;
+  left: 5%;
+  background: #b88a5a;
+}
 
-        white-space: nowrap;
-    }
+.quarry {
+  bottom: 5%;
+  right: 5%;
+  background: #8fb3c9;
+}
 
-    .resource {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
+.crystal_Mine {
+  top: 10%;
+  right: 5%;
+  background: #e6e0c8;
+}
 
-    .resource-name {
-        opacity: 0.8;
-    }
+.farm {
+  bottom: 5%;
+  left: 5%;
+  background: #9fc97a;
+}
 
-    .resource-value {
-        font-weight: bold;
-    }
+.resourceBar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
 
-    .resource:not(:last-child)::after {
-        content: "•";
-        margin-left: 8px;
-        opacity: 0.4;
-    }
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 12px;
+
+  color: #fff;
+  font-size: 12px;
+
+  white-space: nowrap;
+}
+
+.resource {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.resource-name {
+  opacity: 0.8;
+}
+
+.resource-value {
+  font-weight: bold;
+}
+
+.resource:not(:last-child)::after {
+  content: '•';
+  margin-left: 8px;
+  opacity: 0.4;
+}
