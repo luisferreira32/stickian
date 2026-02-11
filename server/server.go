@@ -23,6 +23,7 @@ func run(ctx context.Context, address string) {
 	mux.HandleFunc("/echo", chainMiddleware(dummy.Echo, middlewares...))
 	mux.HandleFunc("GET /hello", chainMiddleware(dummy.Hello, middlewares...))
 	mux.HandleFunc("POST /panic", chainMiddleware(dummy.Panic, middlewares...))
+	mux.HandleFunc("GET /api/city", chainMiddleware(dummy.City, middlewares...))
 
 	// run the server
 	server := http.Server{Addr: address, Handler: mux}
