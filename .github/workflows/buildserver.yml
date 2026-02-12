@@ -1,29 +1,29 @@
 name: Build Server
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    # Checkout code
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    # Go backend setup
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 1.25
-    
-    - name: Download Go dependencies
-      run: go mod download
-      working-directory: ./server
-    
-    - name: Build Go application
-      run: go build -o stickian-server .
-      working-directory: ./server
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.25
+
+      - name: Download Go dependencies
+        run: go mod download
+
+      - name: Build Go application
+        run: go build -o stickian-server .
+        working-directory: ./server
