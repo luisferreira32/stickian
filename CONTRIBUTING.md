@@ -9,6 +9,7 @@ The techstack of the project is a Go backend with a React frontend. So you'll ne
 - Go, check required version in [go.mod](./go.mod)
 - Node, check required version in [package.json](./package.json)
 - Pnpm, for package management with the latest compatible version
+- Prettier, for formatting the front-end code
 
 ## Development
 
