@@ -4,6 +4,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/appci.yml' # trigger itself
       - 'web/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
