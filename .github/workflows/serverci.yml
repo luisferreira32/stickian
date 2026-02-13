@@ -1,4 +1,4 @@
-name: Build Server
+name: Server CI
 on:
   pull_request:
     branches:
@@ -24,6 +24,9 @@ jobs:
       - name: Download Go dependencies
         run: go mod download
 
-      - name: Build Go application
+      - name: Test Go server
+        run: go test ./server/...
+
+      - name: Build Go server
         run: go build -o stickian-server .
         working-directory: ./server
