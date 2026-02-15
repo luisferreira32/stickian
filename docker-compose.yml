@@ -53,6 +53,8 @@ services:
     restart: unless-stopped
     ports:
       - "5173:5173"
+    environment:
+      - VITE_API_URL=http://server:8080
     volumes:
       - ./public:/app/public
       - ./web:/app/web
