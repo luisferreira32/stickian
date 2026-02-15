@@ -1,7 +1,6 @@
 package dummy
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 )
@@ -21,34 +20,4 @@ func Panic(w http.ResponseWriter, r *http.Request) {
 // Hello is an example handler that only answers to GET requests with "hello world".
 func Hello(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("hello world\n"))
-}
-
-func City(w http.ResponseWriter, r *http.Request) {
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Pragma", "no-cache")
-	w.Header().Set("Expires", "0")
-
-	w.WriteHeader(http.StatusOK)
-
-	//Json Example sent. Mess with it to confirm the React App receives it :D
-
-	json.NewEncoder(w).Encode(map[string]any{
-		"cityName": "Stick City",
-		"buildings": map[string]int{
-			"city_Hall":    4,
-			"farm":         2,
-			"quarry":       2,
-			"lumbermill":   2,
-			"crystal_Mine": 3,
-		},
-		"resources": map[string]int{
-			"population": 45,
-			"stone":      215,
-			"sticks":     312,
-			"crystal":    145,
-			"gold":       18,
-		},
-	})
 }

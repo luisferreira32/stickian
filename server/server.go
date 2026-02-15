@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/luisferreira32/stickian/server/dummy"
+	"github.com/luisferreira32/stickian/server/game"
 )
 
 func run(ctx context.Context, address string) {
@@ -18,13 +19,15 @@ func run(ctx context.Context, address string) {
 	}
 
 	mux := http.NewServeMux()
+	g := game.NewGame(game.NewInMemoryDatabase())
 
 	// define all endpoints
 	mux.HandleFunc("/", chainMiddleware(http.FileServer(http.Dir("dist")).ServeHTTP, compressionMiddleware()))
 	mux.HandleFunc("/echo", chainMiddleware(dummy.Echo, middlewares...))
 	mux.HandleFunc("GET /hello", chainMiddleware(dummy.Hello, middlewares...))
 	mux.HandleFunc("POST /panic", chainMiddleware(dummy.Panic, middlewares...))
-	mux.HandleFunc("GET /api/city", chainMiddleware(dummy.City, middlewares...))
+	mux.HandleFunc("GET /api/city", chainMiddleware(g.GetCity, middlewares...))
+	mux.HandleFunc("POST /api/city/upgrade", chainMiddleware(g.UpgradeCity, middlewares...))
 
 	// run the server
 	server := http.Server{Addr: address, Handler: mux}
@@ -34,6 +37,9 @@ func run(ctx context.Context, address string) {
 		}
 	}()
 	log.Printf("server started on %s\n", address)
+
+	go g.Run(ctx)
+	log.Printf("main game loop started")
 
 	<-ctx.Done()
 
