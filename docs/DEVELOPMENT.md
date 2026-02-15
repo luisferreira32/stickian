@@ -6,9 +6,8 @@
 docker compose up
 ```
 
-`Database frontend (PGAdmin):`
+Database frontend (PGAdmin):
 
 - http://localhost:5050
-
-master password: 'postgres'
+- master password: 'postgres'
 
