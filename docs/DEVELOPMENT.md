@@ -1,5 +1,9 @@
 # Local Development
 
+- (Tools)[#tools]
+- (Run it locally: Docker Compose)[#run-it-locally:-docker-compose]
+- (Run it locally: "Bare metal")[#run-it-locally-"bare-metal"]
+
 ## Tools
 
 The techstack of the project is a Go backend, a PostgreSQL database and a React frontend. It is advised to use docker for reproducibility. So you'll need:
@@ -10,7 +14,7 @@ The techstack of the project is a Go backend, a PostgreSQL database and a React 
 - Prettier, for formatting the front-end code
 - Docker, to spin-up the local development setup
 
-## Run it locally
+## Run it locally: Docker Compose
 
 Start the local stack with Docker Compose:
 
@@ -43,3 +47,21 @@ To test server changes you need to re-build the server:
 ```bash
 docker compose up --build server -d
 ```
+
+## Run it locally: "Bare metal"
+
+A second option is to run it without docker.
+
+To run the server:
+
+```bash
+go run ./server/
+```
+
+To run the web application:
+
+```bash
+pnpm dev
+```
+
+_TODO: PostgreSQL setup_
