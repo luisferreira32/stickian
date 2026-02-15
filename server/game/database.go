@@ -1,15 +1,8 @@
 package game
 
 import (
-	"encoding/json"
-	"time"
+	"sync"
 )
-
-type event struct {
-	Name eventName
-	Time time.Time
-	Data json.RawMessage
-}
 
 type database interface {
 	WriteEvent(e *event) error
@@ -23,9 +16,8 @@ type database interface {
 // This must only be used for development and testing purposes.
 func NewInMemoryDatabase() *inMemoryDatabase {
 	i := &inMemoryDatabase{
-		cities:  make(map[string]*City),
-		events:  make([]*event, 0),
-		timeNow: time.Now,
+		cities: make(map[string]*City),
+		events: make(map[string]*event),
 	}
 
 	// setup some hardcoded mock data for now
@@ -33,18 +25,18 @@ func NewInMemoryDatabase() *inMemoryDatabase {
 		ID:   "city_123",
 		Name: "Stick City",
 		Buildings: map[string]int{
-			"city_Hall":    4,
-			"farm":         2,
-			"quarry":       2,
-			"lumbermill":   2,
-			"crystal_Mine": 3,
+			CityHall:    4,
+			Farm:        2,
+			Quarry:      2,
+			LumberMill:  2,
+			CrystalMine: 3,
 		},
 		Resources: map[string]int{
-			"population": 45,
-			"stone":      215,
-			"sticks":     312,
-			"crystal":    145,
-			"gold":       18,
+			Population: 645,
+			Stone:      2115,
+			Sticks:     3342,
+			Crystal:    1455,
+			Gold:       1812,
 		},
 	}
 	_ = i.WriteCity(&c)
@@ -55,20 +47,26 @@ func NewInMemoryDatabase() *inMemoryDatabase {
 // inMemoryDatabase implements the interface for a simple in-memory database.
 type inMemoryDatabase struct {
 	cities map[string]*City
-	events []*event
-
-	// defined as a field to mock in unit tests
-	timeNow func() time.Time
+	events map[string]*event
+	evLock sync.Mutex
 }
 
 func (db *inMemoryDatabase) WriteEvent(e *event) error {
-	e.Time = db.timeNow() // set the event time on the database level to ensure consistency across events
-	db.events = append(db.events, e)
+	db.evLock.Lock()
+	defer db.evLock.Unlock()
+	db.events[e.Key] = e
 	return nil
 }
 
 func (db *inMemoryDatabase) GetEvents() ([]*event, error) {
-	return db.events, nil
+	db.evLock.Lock()
+	defer db.evLock.Unlock()
+
+	events := make([]*event, 0, len(db.events))
+	for _, e := range db.events {
+		events = append(events, e)
+	}
+	return events, nil
 }
 
 func (db *inMemoryDatabase) WriteCity(c *City) error {

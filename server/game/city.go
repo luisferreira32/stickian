@@ -2,16 +2,24 @@ package game
 
 import (
 	"encoding/json"
-	"io"
+	"fmt"
 	"net/http"
+	"time"
 )
 
 // TODO: define this in a OpenAPI spec and generate to have consistent structs with server/client.
 type City struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"cityName"`
-	Buildings map[string]int `json:"buildings"`
-	Resources map[string]int `json:"resources"`
+	ID             string              `json:"id"`
+	Name           string              `json:"cityName"`
+	Buildings      map[string]int      `json:"buildings"`
+	Resources      map[string]int      `json:"resources"`
+	BuildingsQueue []BuildingQueueItem `json:"buildingsQueue"`
+}
+
+type BuildingQueueItem struct {
+	Building     string    `json:"building"`
+	Level        int       `json:"level"`
+	CompleteTime time.Time `json:"completeTime"`
 }
 
 func (g *game) GetCity(w http.ResponseWriter, r *http.Request) {
@@ -20,6 +28,7 @@ func (g *game) GetCity(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
 
+	// TODO: use cityID from path or query params instead of hardcoding
 	res, err := g.db.GetCity("city_123")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -33,28 +42,51 @@ func (g *game) GetCity(w http.ResponseWriter, r *http.Request) {
 }
 
 // TODO: define this in a OpenAPI spec and generate to have consistent structs with server/client.
-type UpgradeCityRequest struct {
-	ID       string `json:"id"`
+type UpgradeBuildingRequest struct {
+	CityID   string `json:"cityID"`
 	Building string `json:"building"`
+	Level    int    `json:"level"`
 }
 
-func (g *game) UpgradeCity(w http.ResponseWriter, r *http.Request) {
-	var req UpgradeCityRequest
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1048576)) // limit request body to 1MB to prevent abuse
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte("error reading request body: " + err.Error()))
-		return
+func validateUpgradeBuildingRequest(req *UpgradeBuildingRequest) error {
+	if req.CityID == "" || req.Building == "" || req.Level <= 0 {
+		return fmt.Errorf("missing or invalid fields in request body")
 	}
-	err = json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
+	if _, ok := buildingUpgradeCosts[req.Building][req.Level]; !ok {
+		return fmt.Errorf("invalid building or level")
+	}
+	return nil
+}
+
+func (g *game) UpgradeBuilding(w http.ResponseWriter, r *http.Request) {
+	req := &UpgradeBuildingRequest{}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1048576)).Decode(req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte("invalid request body: " + err.Error()))
 		return
 	}
 
-	req.ID = "city_123" // for now we only have one test city, so we ignore the ID in the request
-	err = g.db.WriteEvent(&event{Name: UpgradeCity, Data: body})
+	// basic request validation: the actual resource calculation will only be done in the game loop
+	if err := validateUpgradeBuildingRequest(req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(err.Error()))
+		return
+	}
+
+	upgradeEvent := &UpgradeBuildingEvent{
+		CityID:   req.CityID,
+		Building: req.Building,
+		Level:    req.Level,
+	}
+	event, err := upgradeEvent.toEvent()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("error creating event: " + err.Error()))
+		return
+	}
+	event.Time = g.timeNow() // set the event time on the server side to ensure consistency across events
+
+	err = g.db.WriteEvent(event)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte("error writing event: " + err.Error()))
