@@ -1,7 +1,7 @@
 # Architecture
 
-- (Overview)[#overview]
-- (Event processing)[#event-processing]
+- [Overview](#overview)
+- [Event processing](#event-processing)
 
 ## Overview
 

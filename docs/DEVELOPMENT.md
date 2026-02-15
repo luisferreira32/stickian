@@ -1,8 +1,8 @@
 # Local Development
 
-- (Tools)[#tools]
-- (Run it locally: Docker Compose)[#run-it-locally:-docker-compose]
-- (Run it locally: "Bare metal")[#run-it-locally-"bare-metal"]
+- [Tools](#tools)
+- [Run it locally: Docker Compose](#run-it-locally-docker-compose)
+- [Run it locally: "Bare metal"](#run-it-locally-bare-metal)
 
 ## Tools
 
