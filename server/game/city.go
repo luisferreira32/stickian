@@ -85,6 +85,7 @@ func (g *game) UpgradeBuilding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	event.Time = g.timeNow() // set the event time on the server side to ensure consistency across events
+	event.Tick = g.currentTick()
 
 	err = g.db.WriteEvent(event)
 	if err != nil {

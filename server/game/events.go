@@ -12,6 +12,7 @@ type event struct {
 	Key  string
 	Type eventType
 	Time time.Time
+	Tick int64
 	Data json.RawMessage
 }
 

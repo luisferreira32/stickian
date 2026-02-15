@@ -6,7 +6,7 @@ import (
 
 type database interface {
 	WriteEvent(e *event) error
-	GetEvents() ([]*event, error)
+	GetEvents(tick int64) ([]*event, error)
 	WriteCity(c *City) error
 	GetCity(id string) (*City, error)
 }
@@ -58,12 +58,15 @@ func (db *inMemoryDatabase) WriteEvent(e *event) error {
 	return nil
 }
 
-func (db *inMemoryDatabase) GetEvents() ([]*event, error) {
+func (db *inMemoryDatabase) GetEvents(tick int64) ([]*event, error) {
 	db.evLock.Lock()
 	defer db.evLock.Unlock()
 
 	events := make([]*event, 0, len(db.events))
 	for _, e := range db.events {
+		if e.Tick != tick {
+			continue
+		}
 		events = append(events, e)
 	}
 	return events, nil

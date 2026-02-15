@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -21,6 +22,13 @@ func NewGame(db database) *game {
 type game struct {
 	db database
 
+	// we use a tick system for event processing. each tick is expected to take one second
+	// but we will process all events in the tick before moving forward to the next one, therefore
+	// it is necessary to keep a tick counter to be able to fetch only the relevant events for each
+	// tick and allow other events to be added to the database while processing the current tick.
+	tick     int64
+	tickLock sync.RWMutex
+
 	// defined as a field to mock in unit tests
 	timeNow func() time.Time
 }
@@ -32,7 +40,12 @@ func (g *game) Run(ctx context.Context) {
 	for {
 		select {
 		case <-clock.C:
-			if err := g.processTick(); err != nil {
+			g.tickLock.Lock()
+			tickToProcess := g.tick
+			g.tick++
+			g.tickLock.Unlock()
+
+			if err := g.processTick(tickToProcess); err != nil {
 				log.Printf("error processing tick: %v", err)
 			}
 		case <-ctx.Done():
@@ -41,10 +54,16 @@ func (g *game) Run(ctx context.Context) {
 	}
 }
 
-func (g *game) processTick() error {
+func (g *game) currentTick() int64 {
+	g.tickLock.RLock()
+	defer g.tickLock.RUnlock()
+	return g.tick
+}
+
+func (g *game) processTick(tick int64) error {
 	// 1. get events from the database
 
-	events, err := g.db.GetEvents()
+	events, err := g.db.GetEvents(tick)
 	if err != nil {
 		return err
 	}
@@ -111,7 +130,8 @@ func (g *game) processTick() error {
 				log.Printf("error creating complete event: %v", err)
 				continue
 			}
-			completeEvent.Time = upgradeCompleteTime // this will be in the future
+			completeEvent.Time = upgradeCompleteTime                  // this will be in the future
+			completeEvent.Tick = tick + int64(buildingTime.Seconds()) // assign tick based on building time to ensure it gets processed in the correct order
 			generatedEvents = append(generatedEvents, completeEvent)
 			city.Resources = deductResources(city.Resources, neededResources)
 			city.BuildingsQueue = append(city.BuildingsQueue, BuildingQueueItem{
