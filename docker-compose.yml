@@ -32,6 +32,37 @@ services:
     networks:
       - db-network
 
+  server:
+    build:
+      context: .
+      dockerfile: server.Dockerfile
+    container_name: stickian-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - db-network
+
+  web:
+    build:
+      context: .
+      dockerfile: web.Dockerfile
+    container_name: stickian-web
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://server:8080
+    volumes:
+      - ./public:/app/public
+      - ./web:/app/web
+    depends_on:
+      - server
+    networks:
+      - db-network
+
 volumes:
   postgres_data:
   pgadmin_data:
