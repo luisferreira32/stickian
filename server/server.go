@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/luisferreira32/stickian/server/dummy"
+	"github.com/luisferreira32/stickian/server/game"
+	"github.com/luisferreira32/stickian/server/user"
 )
 
 func run(ctx context.Context, address string) {
@@ -18,13 +20,20 @@ func run(ctx context.Context, address string) {
 	}
 
 	mux := http.NewServeMux()
+	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
+	userSvc := &user.UserService{}
 
 	// define all endpoints
+	// serve static files for the client app
 	mux.HandleFunc("/", chainMiddleware(http.FileServer(http.Dir("dist")).ServeHTTP, compressionMiddleware()))
-	mux.HandleFunc("/echo", chainMiddleware(dummy.Echo, middlewares...))
-	mux.HandleFunc("GET /hello", chainMiddleware(dummy.Hello, middlewares...))
-	mux.HandleFunc("POST /panic", chainMiddleware(dummy.Panic, middlewares...))
-	mux.HandleFunc("GET /api/city", chainMiddleware(dummy.City, middlewares...))
+	// dummy endpoints for testing purposes
+	mux.HandleFunc("/api/echo", chainMiddleware(dummy.Echo, middlewares...))
+	mux.HandleFunc("GET /api/hello", chainMiddleware(dummy.Hello, middlewares...))
+	mux.HandleFunc("POST /api/panic", chainMiddleware(dummy.Panic, middlewares...))
+	// game endpoints
+	mux.HandleFunc("GET /api/city", chainMiddleware(gameSvc.GetCity, middlewares...))
+	// user endpoints
+	mux.HandleFunc("POST /api/login", chainMiddleware(userSvc.Login, middlewares...))
 
 	// run the server
 	server := http.Server{Addr: address, Handler: mux}
