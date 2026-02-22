@@ -146,11 +146,11 @@ const Dummy = () => {
           disabled={gameState.bar < 2}
           style={{
             padding: '0.5rem 1rem',
-            backgroundColor: gameState.bar >= 2 ? '#2196F3' : '#ccc',
+            backgroundColor: gameState.bar >= 1 ? '#2196F3' : '#ccc',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: gameState.bar >= 2 ? 'pointer' : 'not-allowed',
+            cursor: gameState.bar >= 1 ? 'pointer' : 'not-allowed',
           }}
         >
           Build Bar (Cost: 1 Bar, Produces: 2 Bar)

@@ -23,7 +23,7 @@ func run(ctx context.Context, address string) {
 	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
 	userSvc := &user.UserService{}
 	dummySvc := &dummy.DummyService{
-		TickDuration:  int64(time.Second), // 1s
+		TickDuration:  time.Second, // 1s
 		DummyDatabase: &dummy.InMemoryDatabase{EventQueue: make(map[int64][]dummy.Event)},
 	}
 	go dummySvc.Run(ctx)

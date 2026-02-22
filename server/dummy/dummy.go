@@ -35,7 +35,7 @@ func genid() string {
 // DummyService is a dummy service to test ticker functionality for our tick based game loop.
 type DummyService struct {
 	DummyDatabase *InMemoryDatabase
-	TickDuration  int64
+	TickDuration  time.Duration
 
 	tickWrite int64
 	tickRead  int64
@@ -74,7 +74,7 @@ func (s *DummyService) BuildBar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get Bar", http.StatusInternalServerError)
 		return
 	}
-	if bar < 2 {
+	if bar < 1 {
 		http.Error(w, "not enough Bar to build Bar", http.StatusBadRequest)
 		return
 	}
@@ -95,50 +95,45 @@ func (s *DummyService) GetFooBar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write([]byte(fmt.Sprintf(`{"foo": %d, "bar": %d}`, foo, bar)))
+	_, _ = fmt.Fprintf(w, `{"foo": %d, "bar": %d}`, foo, bar)
 }
 
 // Run starts the dummy service ticker loop.
 func (s *DummyService) Run(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(s.TickDuration))
-	defer ticker.Stop()
-
-	forceTick := make(chan struct{}, 10)
-	defer close(forceTick)
+	lastProcessedTick := time.Now()
+	startTick := time.Now()
 
 	for {
 		select {
-		case <-forceTick:
-			err := s.tick()
-			if err != nil {
-				log.Printf("tick err: %v", err)
-			}
-		case <-ticker.C:
-			err := s.tick()
-			if err != nil {
-				log.Printf("tick err: %v", err)
-			}
-			if s.tickRead != s.tickWrite {
-				select {
-				case forceTick <- struct{}{}:
-				default:
-					// if we reach this situation means that processing is falling behind a lot!
-					// either due to very long tick processing time or a persistent error
-					log.Printf("skipping tick, forceTick channel is full")
-				}
-			}
 		case <-ctx.Done():
 			return
+		default:
 		}
+
+		// sleep until the next tick
+		time.Sleep(s.TickDuration - time.Since(lastProcessedTick))
+
+		// ensure that tickWrite is incremented regardless of success or failure in tick processing
+		// at the rate of s.TickDuration to ensure an order of events submitted by the frontend
+		s.tickLock.Lock()
+		s.tickWrite = int64((time.Since(startTick) / s.TickDuration))
+		s.tickLock.Unlock()
+
+		err := s.tick()
+		if err != nil {
+			log.Printf("tick err: %v", err)
+			continue
+		}
+		// only update the last processed tick if the tick was processed successfully
+		// this makes it so that if we fail to process a tick due to a transient error
+		// (e.g. database connection issue) we can just retry processing the same tick
+		// right away
+		lastProcessedTick = time.Now()
 	}
 }
 
 func (s *DummyService) tick() error {
-	// prevent new events from being added while we process current tick
-	s.tickLock.Lock()
-	s.tickWrite++
-	s.tickLock.Unlock()
-
+	start := time.Now()
 	// get all events for the current tick under processing
 	events, err := s.DummyDatabase.GetEvents(s.tickRead)
 	if err != nil {
@@ -194,6 +189,6 @@ func (s *DummyService) tick() error {
 	}
 
 	s.tickRead++
-	log.Printf("tick %d processed, foo: %d, bar: %d, events processed: %d\n", s.tickRead, foo, bar, len(events))
+	log.Printf("tick %d processed (write %d), foo: %d, bar: %d, events processed: %d, took %v\n", s.tickRead-1, s.tickWrite, foo, bar, len(events), time.Since(start))
 	return nil
 }
