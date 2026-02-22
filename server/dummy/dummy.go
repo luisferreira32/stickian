@@ -35,11 +35,11 @@ func genid() string {
 // DummyService is a dummy service to test ticker functionality for our tick based game loop.
 type DummyService struct {
 	DummyDatabase *InMemoryDatabase
+	TickDuration  int64
 
-	tickWrite    int64
-	tickRead     int64
-	tickLock     sync.RWMutex
-	tickDuration int64
+	tickWrite int64
+	tickRead  int64
+	tickLock  sync.RWMutex
 }
 
 // TrainFoo is a dummy handler to test event ticker functionality.
@@ -94,14 +94,13 @@ func (s *DummyService) GetFooBar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, _ = w.Write([]byte(
-		`{"foo": ` + string(rune(foo)) + `, "bar": ` + string(rune(bar)) + `}` + "\n",
-	))
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(fmt.Sprintf(`{"foo": %d, "bar": %d}`, foo, bar)))
 }
 
 // Run starts the dummy service ticker loop.
 func (s *DummyService) Run(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(s.tickDuration))
+	ticker := time.NewTicker(time.Duration(s.TickDuration))
 	defer ticker.Stop()
 
 	forceTick := make(chan struct{}, 10)
@@ -195,5 +194,6 @@ func (s *DummyService) tick() error {
 	}
 
 	s.tickRead++
+	log.Printf("tick %d processed, foo: %d, bar: %d, events processed: %d\n", s.tickRead, foo, bar, len(events))
 	return nil
 }

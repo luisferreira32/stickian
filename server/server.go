@@ -22,7 +22,11 @@ func run(ctx context.Context, address string) {
 	mux := http.NewServeMux()
 	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
 	userSvc := &user.UserService{}
-	dummySvc := &dummy.DummyService{DummyDatabase: &dummy.InMemoryDatabase{EventQueue: make(map[int64][]dummy.Event)}}
+	dummySvc := &dummy.DummyService{
+		TickDuration:  int64(time.Second), // 1s
+		DummyDatabase: &dummy.InMemoryDatabase{EventQueue: make(map[int64][]dummy.Event)},
+	}
+	go dummySvc.Run(ctx)
 
 	// define all endpoints
 	// serve static files for the client app
