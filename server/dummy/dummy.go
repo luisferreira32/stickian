@@ -34,12 +34,22 @@ func genid() string {
 
 // DummyService is a dummy service to test ticker functionality for our tick based game loop.
 type DummyService struct {
-	DummyDatabase *InMemoryDatabase
-	TickDuration  time.Duration
+	DummyDatabase1 DummyDatabase
+	DummyDatabase2 DummyDatabase
+	TickDuration   time.Duration
 
 	tickWrite int64
 	tickRead  int64
 	tickLock  sync.RWMutex
+}
+
+func (s *DummyService) Select1(w http.ResponseWriter, r *http.Request) {
+	err := s.DummyDatabase1.Select1(r.Context())
+	if err != nil {
+		http.Error(w, "failed to execute select 1", http.StatusInternalServerError)
+		return
+	}
+	_, _ = w.Write([]byte("select 1 executed successfully\n"))
 }
 
 // TrainFoo is a dummy handler to test event ticker functionality.
@@ -47,7 +57,7 @@ type DummyService struct {
 // To train a Foo you spend 1 Bar and it takes 3 ticks to complete.
 func (s *DummyService) TrainFoo(w http.ResponseWriter, r *http.Request) {
 	// first do basic non-binding validation
-	bar, err := s.DummyDatabase.GetBar()
+	bar, err := s.DummyDatabase2.GetBar()
 	if err != nil {
 		log.Printf("failed to get bar: %v", err)
 		http.Error(w, "failed to get Bar", http.StatusInternalServerError)
@@ -60,7 +70,11 @@ func (s *DummyService) TrainFoo(w http.ResponseWriter, r *http.Request) {
 
 	s.tickLock.RLock()
 	defer s.tickLock.RUnlock()
-	s.DummyDatabase.AddEvent(Event{Type: EventTrainFoo, Key: genid()}, s.tickWrite)
+	err = s.DummyDatabase2.AddEvent(Event{Type: EventTrainFoo, Key: genid()}, s.tickWrite)
+	if err != nil {
+		http.Error(w, "failed to train Foo", http.StatusInternalServerError)
+		return
+	}
 }
 
 // BuildBar is a dummy handler to test event ticker functionality.
@@ -68,7 +82,7 @@ func (s *DummyService) TrainFoo(w http.ResponseWriter, r *http.Request) {
 // To build 2 Bar you spend 1 Bar. And you always produce a baseline of 1 Bar per tick.
 func (s *DummyService) BuildBar(w http.ResponseWriter, r *http.Request) {
 	// first do basic non-binding validation
-	bar, err := s.DummyDatabase.GetBar()
+	bar, err := s.DummyDatabase2.GetBar()
 	if err != nil {
 		log.Printf("failed to get bar: %v", err)
 		http.Error(w, "failed to get Bar", http.StatusInternalServerError)
@@ -81,13 +95,17 @@ func (s *DummyService) BuildBar(w http.ResponseWriter, r *http.Request) {
 
 	s.tickLock.RLock()
 	defer s.tickLock.RUnlock()
-	s.DummyDatabase.AddEvent(Event{Type: EventBuildBar, Key: genid()}, s.tickWrite)
+	err = s.DummyDatabase2.AddEvent(Event{Type: EventBuildBar, Key: genid()}, s.tickWrite)
+	if err != nil {
+		http.Error(w, "failed to build Bar", http.StatusInternalServerError)
+		return
+	}
 }
 
 // GetFooBar is a dummy handler to test event ticker functionality.
 func (s *DummyService) GetFooBar(w http.ResponseWriter, r *http.Request) {
-	foo, err1 := s.DummyDatabase.GetFoo()
-	bar, err2 := s.DummyDatabase.GetBar()
+	foo, err1 := s.DummyDatabase2.GetFoo()
+	bar, err2 := s.DummyDatabase2.GetBar()
 	if err1 != nil || err2 != nil {
 		log.Printf("failed to get state: foo err: %v, bar err: %v", err1, err2)
 		http.Error(w, "failed to get state", http.StatusInternalServerError)
@@ -135,7 +153,7 @@ func (s *DummyService) Run(ctx context.Context) {
 func (s *DummyService) tick() error {
 	start := time.Now()
 	// get all events for the current tick under processing
-	events, err := s.DummyDatabase.GetEvents(s.tickRead)
+	events, err := s.DummyDatabase2.GetEvents(s.tickRead)
 	if err != nil {
 		return fmt.Errorf("failed to get events: %w", err)
 	}
@@ -145,8 +163,8 @@ func (s *DummyService) tick() error {
 	// this is required to ensure we don't end up with an inconsistent state in case of errors during the
 	// processing of the tick
 
-	foo, err1 := s.DummyDatabase.GetFoo()
-	bar, err2 := s.DummyDatabase.GetBar()
+	foo, err1 := s.DummyDatabase2.GetFoo()
+	bar, err2 := s.DummyDatabase2.GetBar()
 	if err1 != nil || err2 != nil {
 		return fmt.Errorf("failed to get state: foo err: %v, bar err: %v", err1, err2)
 	}
@@ -161,7 +179,7 @@ func (s *DummyService) tick() error {
 			}
 			// NOTE: future event keys must be determinisitc such that processing the same events
 			// a second time would not add additional events, but just re-write the same ones
-			err = s.DummyDatabase.AddEvent(Event{Type: EventProducedFoo, Key: event.Key}, s.tickRead+3)
+			err = s.DummyDatabase2.AddEvent(Event{Type: EventProducedFoo, Key: event.Key}, s.tickRead+3)
 			if err != nil {
 				return fmt.Errorf("failed to add produced foo event: %w", err)
 			}
@@ -183,7 +201,7 @@ func (s *DummyService) tick() error {
 
 	// NOTE: update to the database must be transactional, otherwise we might fail partially and
 	// end up with inconsistent state for the re-processing of the tick
-	err = s.DummyDatabase.SetFooBar(foo, bar)
+	err = s.DummyDatabase2.SetFooBar(foo, bar)
 	if err != nil {
 		return fmt.Errorf("failed to set foo and bar: %w", err)
 	}

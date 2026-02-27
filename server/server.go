@@ -2,16 +2,27 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/luisferreira32/stickian/server/dummy"
 	"github.com/luisferreira32/stickian/server/game"
 	"github.com/luisferreira32/stickian/server/user"
 )
 
-func run(ctx context.Context, address string) {
+func newDatabaseConnection(ctx context.Context, databaseURL string) (*pgx.Conn, error) {
+	conn, err := pgx.Connect(ctx, databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+	return conn, nil
+}
+
+func run(ctx context.Context, address, databaseURL string, development bool) {
 	middlewares := []func(http.HandlerFunc) http.HandlerFunc{
 		panicMiddleware(), // always chain the panic middleware first to prevent panics in other middlewares from crashing the server
 	}
@@ -19,12 +30,23 @@ func run(ctx context.Context, address string) {
 		middlewares = append(middlewares, loggingMiddleware())
 	}
 
+	db, err := newDatabaseConnection(ctx, databaseURL)
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
+	}
+	defer func() {
+		if err := db.Close(ctx); err != nil {
+			log.Printf("failed to close database connection: %v", err)
+		}
+	}()
+
 	mux := http.NewServeMux()
 	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
 	userSvc := &user.UserService{}
 	dummySvc := &dummy.DummyService{
-		TickDuration:  time.Second, // 1s
-		DummyDatabase: &dummy.InMemoryDatabase{EventQueue: make(map[int64][]dummy.Event)},
+		TickDuration:   time.Second, // 1s
+		DummyDatabase1: &dummy.PosgresDatabase{DB: db},
+		DummyDatabase2: &dummy.InMemoryDatabase{EventQueue: make(map[int64][]dummy.Event)},
 	}
 	go dummySvc.Run(ctx)
 
@@ -38,6 +60,7 @@ func run(ctx context.Context, address string) {
 	mux.HandleFunc("POST /api/foo", chainMiddleware(dummySvc.TrainFoo, middlewares...))
 	mux.HandleFunc("POST /api/bar", chainMiddleware(dummySvc.BuildBar, middlewares...))
 	mux.HandleFunc("GET /api/foobar", chainMiddleware(dummySvc.GetFooBar, middlewares...))
+	mux.HandleFunc("GET /api/select1", chainMiddleware(dummySvc.Select1, middlewares...))
 	// game endpoints
 	mux.HandleFunc("GET /api/city", chainMiddleware(gameSvc.GetCity, middlewares...))
 	// user endpoints

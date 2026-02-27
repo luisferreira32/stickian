@@ -1,8 +1,77 @@
 package dummy
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"sync"
+
+	"github.com/jackc/pgx/v5"
 )
+
+type DummyDatabase interface {
+	AddEvent(event Event, timestamp int64) error
+	GetEvents(timestamp int64) ([]Event, error)
+	GetFoo() (int, error)
+	GetBar() (int, error)
+	SetFooBar(foo, bar int) error
+	Select1(ctx context.Context) error
+}
+
+// PosgresDatabase is a concrete implementation for a connection to a Postgres database.
+// It does not do anything in the dummy module since there is no actual logic behind it,
+// but serves as an example of how the database interface could be implemented for the game.
+type PosgresDatabase struct {
+	DB *pgx.Conn
+}
+
+func (db *PosgresDatabase) AddEvent(event Event, timestamp int64) error {
+	return errors.New("not implemented")
+}
+
+func (db *PosgresDatabase) GetEvents(timestamp int64) ([]Event, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (db *PosgresDatabase) GetFoo() (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (db *PosgresDatabase) GetBar() (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (db *PosgresDatabase) SetFooBar(foo, bar int) error {
+	return errors.New("not implemented")
+}
+
+func (db *PosgresDatabase) Select1(ctx context.Context) error {
+	rows, err := db.DB.Query(ctx, "SELECT 1;")
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer rows.Close()
+
+	elements := make([]int, 0)
+	for rows.Next() {
+		var element int
+		if err := rows.Scan(&element); err != nil {
+			return fmt.Errorf("failed to scan row: %w", err)
+		}
+		elements = append(elements, element)
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("rows error: %w", err)
+	}
+
+	// this should only have [1], so let's just check that the database is running smoothly
+	if len(elements) != 1 || elements[0] != 1 {
+		return fmt.Errorf("unexpected result: %v", elements)
+	}
+
+	return nil
+}
 
 // InMemoryDatabase is a placeholder for an actual database implementation.
 type InMemoryDatabase struct {
@@ -61,5 +130,9 @@ func (db *InMemoryDatabase) SetFooBar(foo, bar int) error {
 	defer db.l.Unlock()
 	db.Foo = foo
 	db.Bar = bar
+	return nil
+}
+
+func (db *InMemoryDatabase) Select1(_ context.Context) error {
 	return nil
 }

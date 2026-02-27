@@ -1,8 +1,8 @@
 package main
 
 const (
-	// TODO: parameterize with env variables
-	serverPort  = "8080"
-	address     = "0.0.0.0:" + serverPort
-	development = true
+	defaultServerPort = "8080"
+	defaultAddress    = "0.0.0.0:" + defaultServerPort
+	// YES, this is in plain text. But it is literally just in your local environment.
+	testDatabaseURL = "postgres://postgres:postgres@localhost:5432/dbname"
 )
