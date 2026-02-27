@@ -22,6 +22,11 @@ func run(ctx context.Context, address string) {
 	mux := http.NewServeMux()
 	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
 	userSvc := &user.UserService{}
+	dummySvc := &dummy.DummyService{
+		TickDuration:  time.Second, // 1s
+		DummyDatabase: &dummy.InMemoryDatabase{EventQueue: make(map[int64][]dummy.Event)},
+	}
+	go dummySvc.Run(ctx)
 
 	// define all endpoints
 	// serve static files for the client app
@@ -30,6 +35,9 @@ func run(ctx context.Context, address string) {
 	mux.HandleFunc("/api/echo", chainMiddleware(dummy.Echo, middlewares...))
 	mux.HandleFunc("GET /api/hello", chainMiddleware(dummy.Hello, middlewares...))
 	mux.HandleFunc("POST /api/panic", chainMiddleware(dummy.Panic, middlewares...))
+	mux.HandleFunc("POST /api/foo", chainMiddleware(dummySvc.TrainFoo, middlewares...))
+	mux.HandleFunc("POST /api/bar", chainMiddleware(dummySvc.BuildBar, middlewares...))
+	mux.HandleFunc("GET /api/foobar", chainMiddleware(dummySvc.GetFooBar, middlewares...))
 	// game endpoints
 	mux.HandleFunc("GET /api/city", chainMiddleware(gameSvc.GetCity, middlewares...))
 	// user endpoints
