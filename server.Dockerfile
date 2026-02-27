@@ -2,10 +2,10 @@ FROM golang:1.25-alpine AS builder
 WORKDIR /app
 
 # install dependencies and build the server
-COPY go.mod ./
+COPY go.mod go.sum .
 RUN go mod download
 COPY server/ ./server/
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o stickian-server ./server
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o stickian-server ./server
 
 # deploy without golang
 FROM alpine:latest
