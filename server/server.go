@@ -7,22 +7,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/luisferreira32/stickian/server/dummy"
 	"github.com/luisferreira32/stickian/server/game"
 	"github.com/luisferreira32/stickian/server/user"
 )
 
-func newDatabaseConnection(ctx context.Context, databaseURL string) (*pgx.Conn, error) {
-	conn, err := pgx.Connect(ctx, databaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-	return conn, nil
-}
-
-func run(ctx context.Context, address, databaseURL string, development bool) {
+func run(ctx context.Context, address, databaseURL, migrationsURL string, development bool) error {
 	middlewares := []func(http.HandlerFunc) http.HandlerFunc{
 		panicMiddleware(), // always chain the panic middleware first to prevent panics in other middlewares from crashing the server
 	}
@@ -30,9 +20,14 @@ func run(ctx context.Context, address, databaseURL string, development bool) {
 		middlewares = append(middlewares, loggingMiddleware())
 	}
 
+	err := runMigrations(migrationsURL, databaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
 	db, err := newDatabaseConnection(ctx, databaseURL)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 	defer func() {
 		if err := db.Close(ctx); err != nil {
@@ -82,6 +77,8 @@ func run(ctx context.Context, address, databaseURL string, development bool) {
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("server shutdown: %v", err)
+		return fmt.Errorf("server shutdown: %w", err)
 	}
+
+	return nil
 }

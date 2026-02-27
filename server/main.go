@@ -22,10 +22,14 @@ func main() {
 	address := parseDefault("SERVER_ADDRESS", defaultAddress)
 	development := parseDefault("DEVELOPMENT", "true") == "true"
 	databaseURL := parseDefault("DATABASE_URL", "postgres://user:password@localhost:5432/dbname")
+	migrationsURL := parseDefault("MIGRATIONS_URL", deafultMigrationsURL)
 
 	if testDatabaseURL == databaseURL && !development {
 		log.Panicf("no.")
 	}
 
-	run(ctx, address, databaseURL, development)
+	err := run(ctx, address, databaseURL, migrationsURL, development)
+	if err != nil {
+		log.Panicf("server error: %v", err)
+	}
 }
