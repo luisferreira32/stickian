@@ -41,7 +41,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/app
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/app?sslmode=disable
+      - MIGRATIONS_URL=file:///root/migrations
     depends_on:
       - postgres
     networks:
