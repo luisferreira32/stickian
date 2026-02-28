@@ -16,10 +16,12 @@ The techstack of the project is a Go backend, a PostgreSQL database and a React 
 
 ## Run it locally: Docker Compose
 
+This is the **preferred** way of development if you want a one-stop shop setup just working.
+
 Start the local stack with Docker Compose:
 
 ```bash
-docker compose up
+docker compose up -w
 ```
 
 Database frontend (PGAdmin):
@@ -40,28 +42,50 @@ Frontend (React application):
 
 - http://localhost:5173
 
-Any changes to the source files React application will be reflected on the local development setup due to the local mount in [docker-compose.yml](../docker-compose.yml).
+Any changes to the source files React application and Go server will be reflected on the local development setup watch statements in [docker-compose.yml](../docker-compose.yml).
 
-To test server changes you need to re-build the server:
+For a clean slate after development, remove everything with:
 
 ```bash
-docker compose up --build server -d
+docker compose down -v
 ```
+
+Some caveats of the approach:
+
+- Any change to dependencies will rebuild the docker images, that will not re-use already downloaded dependencies and will take longer the more dependencies there are;
+- Since Go is a compiled language, any changes to the server will rebuild the server image and require a re-compilation. This takes longer since cached compilation artifacts are not available on the docker image.
 
 ## Run it locally: "Bare metal"
 
-A second option is to run it without docker.
+A second option is to run it locally with a hybrid setup. This is to avoid the caveats above mentioned, but adds complexity to the setup.
 
-To run the server:
+The **one time** setup, and whenever dependencies change, is to download such dependencies:
 
 ```bash
-go run ./server/
+pnpm install
+go mod download
 ```
 
-To run the web application:
+Then, start the database on a first terminal:
+
+```bash
+docker compose up postgres
+```
+
+Run the server on another terminal, and re-start the command whenever you need to test a new version of the code:
+
+```bash
+cd server && go run .
+```
+
+On a third terminal, run the web application, which will automatically do a hot-reload for any file changes:
 
 ```bash
 pnpm dev
 ```
 
-_TODO: PostgreSQL setup_
+If you want to inspect the database, you can use `psql` with the dummy local database:
+
+```bash
+psql postgres://postgres:postgres@localhost:5432/app?sslmode=disable
+```

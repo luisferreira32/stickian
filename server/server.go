@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -64,7 +65,7 @@ func run(ctx context.Context, address, databaseURL, migrationsURL string, develo
 	// run the server
 	server := http.Server{Addr: address, Handler: mux}
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Printf("listen and serve err: %v", err)
 		}
 	}()

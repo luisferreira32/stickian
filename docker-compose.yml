@@ -35,14 +35,20 @@ services:
   server:
     build:
       context: .
-      dockerfile: server.Dockerfile
+      dockerfile: dev.server.Dockerfile
     container_name: stickian-server
     restart: unless-stopped
+    develop:
+      watch:
+        - action: rebuild
+          path: ./server
+        - action: rebuild
+          path: go.mod
     ports:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/app?sslmode=disable
-      - MIGRATIONS_URL=file:///root/migrations
+      - MIGRATIONS_URL=file:///root/server/migrations
     depends_on:
       - postgres
     networks:
@@ -51,16 +57,26 @@ services:
   web:
     build:
       context: .
-      dockerfile: web.Dockerfile
+      dockerfile: dev.web.Dockerfile
     container_name: stickian-web
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./web
+          target: /app/web
+        - action: sync
+          path: ./public
+          target: /app/public
+        - action: sync
+          path: ./index.html
+          target: /app/index.html
+        - action: rebuild
+          path: package.json
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://server:8080
-    volumes:
-      - ./public:/app/public
-      - ./web:/app/web
     depends_on:
       - server
     networks:
