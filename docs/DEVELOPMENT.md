@@ -3,6 +3,7 @@
 - [Tools](#tools)
 - [Run it locally: Docker Compose](#run-it-locally-docker-compose)
 - [Run it locally: "Bare metal"](#run-it-locally-bare-metal)
+- [Database migrations](#database-migrations)
 
 ## Tools
 
@@ -89,3 +90,21 @@ If you want to inspect the database, you can use `psql` with the dummy local dat
 ```bash
 psql postgres://postgres:postgres@localhost:5432/app?sslmode=disable
 ```
+
+# Database migrations
+
+The database schema is defined under [migrations](../server/migrations/) and ran with [golang-migrate](https://github.com/golang-migrate/migrate) during the server startup. The tool performs migrations in a conservative way where SQL errors might set the migration state to dirty and avoid future actions until a human intervention, read more about it on the tool. This means, for development, you might reach an inconsistent state that needs to be fixed. This section of the documentation is to help you in such situations!
+
+If your migrations are in a "dirty" state you should:
+
+1. Fix your SQL! Otherwise, re-applying it will make the migration turn into a _dirty_ state again
+2. Remove the dirty flag and reset the migration to the latest one run
+
+Doing point 2. requires fiddling with the database data. Since in development you can run everything from a clean slate you can clean everything and re-start your development:
+
+```bash
+docker compose down -v
+docker compose up -w
+```
+
+If the purpose is to not lose local test data, you have to connect to the database and rever the `schema_migrations` table up to the last applied version with `dirty` set to `0`.
