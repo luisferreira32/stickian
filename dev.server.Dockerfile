@@ -6,6 +6,5 @@ COPY go.mod go.sum .
 RUN go mod download
 COPY server/ ./server/
 EXPOSE 8080
-ENV CGO_ENABLED=0 
-ENV GOOS=linux
+ENV CGO_ENABLED=0
 CMD ["go", "run", "./server/"]

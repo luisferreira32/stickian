@@ -38,7 +38,7 @@ func run(ctx context.Context, address, databaseURL, migrationsURL string, develo
 
 	mux := http.NewServeMux()
 	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
-	userSvc := &user.UserService{}
+	userSvc := &user.UserService{Database: &user.InMemoryDatabase{UserTable: make(map[string]*user.User)}}
 	dummySvc := &dummy.DummyService{
 		TickDuration:   time.Second, // 1s
 		DummyDatabase1: &dummy.PosgresDatabase{DB: db},
