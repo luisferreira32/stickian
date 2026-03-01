@@ -62,6 +62,7 @@ func validSignupRequest(req *SignupRequest) string {
 	if req.Password == "" {
 		return "password is required"
 	}
+
 	// check for the password strength:
 	// - at least 8 characters
 	// - at least one uppercase letter

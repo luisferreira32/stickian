@@ -1,34 +1,76 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+} from 'react-router-dom'
+import { isAuthenticated, logout } from './auth'
+import Signup from './Signup'
+import Login from './Login'
+import Dummy from './Dummy'
 import './App.css'
 
-const App = () => {
-  const [count, setCount] = useState(0)
+const Navigation = () => {
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <nav className="navbar">
+      <div className="nav-brand">
+        <Link to="/">Stickian</Link>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
+      <div className="nav-links">
+        {isAuthenticated() ? (
+          <>
+            <Link to="/">Home</Link>
+            <button onClick={handleLogout} className="logout-btn">
+              Logout
+            </button>
+          </>
+        ) : (
+          <>
+            <Link to="/login">Login</Link>
+            <Link to="/signup">Sign Up</Link>
+          </>
+        )}
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </nav>
+  )
+}
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  if (!isAuthenticated()) {
+    return <Login />
+  }
+  return <>{children}</>
+}
+
+const App = () => {
+  return (
+    <Router>
+      <div className="app">
+        <Navigation />
+        <div className="main-content">
+          <Routes>
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Dummy />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </div>
+      </div>
+    </Router>
   )
 }
 

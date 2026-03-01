@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
 	"mime"
 	"net/http"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func chainMiddleware(f http.HandlerFunc, middlewares ...func(http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {
@@ -71,6 +74,61 @@ func compressionMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 			}
 
 			// serve uncompressed file
+			f(w, r)
+		})
+	}
+}
+
+var (
+	// noAuthEndpoints is an allowlist for endpoints that do not require authentication
+	noAuthEndpoints = map[string]struct{}{
+		"POST /api/login":  {},
+		"POST /api/signup": {},
+	}
+)
+
+// authMiddleware validates the JWT in the Authorization header and adds the user ID to the context
+//
+// The middleware should be chained for all endpoints per default, and the noAuthEndpoint variable
+// should be used to specify any endpoints that should skip authentication (e.g. login, signup). This ensures a
+// default secure behavior while allowing flexibility for public endpoints.
+//
+// Endpoints are still responsible for implementing the authorization part, i.e., checking if a certain
+// user is allowed to perform a certain action, by using the user ID in the context.
+func authMiddleware(secretKey string) func(http.HandlerFunc) http.HandlerFunc {
+	return func(f http.HandlerFunc) http.HandlerFunc {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, ok := noAuthEndpoints[r.Method+" "+r.URL.Path]; ok {
+				f(w, r)
+				return
+			}
+
+			tokenString := r.Header.Get("Authorization")
+			if tokenString == "" {
+				http.Error(w, "missing authorization token", http.StatusUnauthorized)
+				return
+			}
+			tokenString, ok := strings.CutPrefix(tokenString, "Bearer ")
+			if !ok {
+				http.Error(w, "invalid authorization header format", http.StatusUnauthorized)
+				return
+			}
+			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+				return []byte(secretKey), nil
+			}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+			if err != nil || !token.Valid {
+				http.Error(w, "invalid token", http.StatusUnauthorized)
+				return
+			}
+
+			sub, err := token.Claims.GetSubject()
+			if err != nil {
+				http.Error(w, "invalid token claims", http.StatusUnauthorized)
+				return
+			}
+
+			// add user ID from token claims to request context for future handlers to use in authorization
+			r = r.WithContext(context.WithValue(r.Context(), "sub", sub))
 			f(w, r)
 		})
 	}
