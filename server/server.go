@@ -41,7 +41,7 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
 	userSvc := &user.UserService{
 		SecretKey:   secretKey,
-		Database:    &user.InMemoryDatabase{UserTable: make(map[string]*user.User)},
+		Database:    &user.PostgresDatabase{DB: db},
 		Development: development,
 	}
 	dummySvc := &dummy.DummyService{

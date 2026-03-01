@@ -63,6 +63,9 @@ func validSignupRequest(req *SignupRequest, isDevelopment bool) string {
 	if req.Password == "" {
 		return "password is required"
 	}
+	if len([]byte(req.Password)) > 72 { // bcrypt has a maximum password length of 72 bytes
+		return "password too long"
+	}
 
 	if isDevelopment {
 		return ""
@@ -136,7 +139,7 @@ func (h *UserService) Signup(w http.ResponseWriter, r *http.Request) {
 		Username:       req.Username,
 		HashedPassword: hashedPassword,
 	}
-	err = h.Database.WriteUser(user)
+	err = h.Database.WriteUser(r.Context(), user)
 	if err != nil {
 		http.Error(w, "failed to create user", http.StatusInternalServerError)
 		return
@@ -192,7 +195,7 @@ func (h *UserService) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.Database.GetUser(req.Username)
+	user, err := h.Database.GetUser(r.Context(), req.Username)
 	if err != nil {
 		http.Error(w, "invalid username or password", http.StatusUnauthorized)
 		return
