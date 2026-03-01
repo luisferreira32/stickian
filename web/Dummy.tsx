@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { apiRequest } from './auth'
 
 interface GameState {
   foo: number
@@ -13,7 +14,7 @@ const Dummy = () => {
   // Fetch current game state from server
   const fetchGameState = useCallback(async () => {
     try {
-      const response = await fetch('/api/foobar')
+      const response = await apiRequest('/api/foobar')
       if (!response.ok) {
         throw new Error(`Failed to fetch game state: ${response.statusText}`)
       }
@@ -39,7 +40,7 @@ const Dummy = () => {
     setGameState((prev) => ({ ...prev, bar: prev.bar - 1 }))
 
     try {
-      const response = await fetch('/api/foo', { method: 'POST' })
+      const response = await apiRequest('/api/foo', { method: 'POST' })
       if (!response.ok) {
         throw new Error(`Failed to train Foo: ${response.statusText}`)
       }
@@ -63,7 +64,7 @@ const Dummy = () => {
     setGameState((prev) => ({ ...prev, bar: prev.bar + 1 }))
 
     try {
-      const response = await fetch('/api/bar', { method: 'POST' })
+      const response = await apiRequest('/api/bar', { method: 'POST' })
       if (!response.ok) {
         throw new Error(`Failed to build Bar: ${response.statusText}`)
       }

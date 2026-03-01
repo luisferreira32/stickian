@@ -23,12 +23,13 @@ func main() {
 	development := parseDefault("DEVELOPMENT", "true") == "true"
 	databaseURL := parseDefault("DATABASE_URL", testDatabaseURL)
 	migrationsURL := parseDefault("MIGRATIONS_URL", deafultMigrationsURL)
+	secretKey := parseDefault("SECRET_KEY", testSecretKey)
 
-	if testDatabaseURL == databaseURL && !development {
+	if (testDatabaseURL == databaseURL || secretKey == testSecretKey) && !development {
 		log.Panicf("no.")
 	}
 
-	err := run(ctx, address, databaseURL, migrationsURL, development)
+	err := run(ctx, address, databaseURL, migrationsURL, secretKey, development)
 	if err != nil {
 		log.Panicf("server error: %v", err)
 	}
