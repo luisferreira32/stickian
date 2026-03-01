@@ -40,8 +40,9 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	mux := http.NewServeMux()
 	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
 	userSvc := &user.UserService{
-		SecretKey: secretKey,
-		Database:  &user.InMemoryDatabase{UserTable: make(map[string]*user.User)},
+		SecretKey:   secretKey,
+		Database:    &user.InMemoryDatabase{UserTable: make(map[string]*user.User)},
+		Development: development,
 	}
 	dummySvc := &dummy.DummyService{
 		TickDuration:   time.Second, // 1s

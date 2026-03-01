@@ -15,8 +15,9 @@ const (
 )
 
 type UserService struct {
-	Database  UserDatabase
-	SecretKey string
+	Database    UserDatabase
+	SecretKey   string
+	Development bool
 }
 
 // User defines the structure of a user in the system.
@@ -52,7 +53,7 @@ type SignupResponse struct {
 	AccessToken string `json:"accessToken"`
 }
 
-func validSignupRequest(req *SignupRequest) string {
+func validSignupRequest(req *SignupRequest, isDevelopment bool) string {
 	if req.Username == "" {
 		return "username is required"
 	}
@@ -61,6 +62,10 @@ func validSignupRequest(req *SignupRequest) string {
 	}
 	if req.Password == "" {
 		return "password is required"
+	}
+
+	if isDevelopment {
+		return ""
 	}
 
 	// check for the password strength:
@@ -112,7 +117,7 @@ func (h *UserService) Signup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	if errReason := validSignupRequest(&req); errReason != "" {
+	if errReason := validSignupRequest(&req, h.Development); errReason != "" {
 		http.Error(w, errReason, http.StatusBadRequest)
 		return
 	}
