@@ -30,7 +30,7 @@ func (db *InMemoryDatabase) GetCity(_ string) (*City, error) {
 			X: 10,
 			Y: 10,
 		},
-		Player: "Stickman",
+		PlayerID: "Stickman",
 	}, nil
 }
 
@@ -43,7 +43,7 @@ func (db *InMemoryDatabase) GetCities(_, _ Location) ([]*City, error) {
 			X: 10,
 			Y: 10,
 		},
-		Player: "Stickman",
+		PlayerID: "Stickman",
 	}
 	city2 := &City{
 		Name: "Stickville",
@@ -51,7 +51,7 @@ func (db *InMemoryDatabase) GetCities(_, _ Location) ([]*City, error) {
 			X: 15,
 			Y: 11,
 		},
-		Player: "Stickwoman",
+		PlayerID: "Stickwoman",
 	}
 	return []*City{city1, city2}, nil
 }

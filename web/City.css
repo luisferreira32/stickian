@@ -100,7 +100,7 @@ body {
 }
 
 /* Individual building positions */
-.city_Hall {
+.cityHall {
   top: 50%;
   left: 50%;
 
@@ -124,7 +124,7 @@ body {
   background: #8fb3c9;
 }
 
-.crystal_Mine {
+.crystalMine {
   top: 10%;
   right: 5%;
   background: #e6e0c8;

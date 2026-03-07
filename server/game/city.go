@@ -13,18 +13,19 @@ import (
 // both server and client, with the additional benefit of api docs.
 type City struct {
 	Name      string     `json:"cityName"`
+	ID        string     `json:"id"`
 	Buildings *Buildings `json:"buildings,omitempty"`
 	Resources *Resources `json:"resources,omitempty"`
 	Location  *Location  `json:"location"`
-	Player    string     `json:"player"`
+	PlayerID  string     `json:"playerID"`
 }
 
 type Buildings struct {
-	CityHall    int `json:"city_Hall"`
+	CityHall    int `json:"cityHall"`
 	Farm        int `json:"farm"`
 	Quarry      int `json:"quarry"`
 	Lumbermill  int `json:"lumbermill"`
-	CrystalMine int `json:"crystal_Mine"`
+	CrystalMine int `json:"crystalMine"`
 }
 
 type Resources struct {
@@ -47,7 +48,9 @@ func (g *GameService) GetCity(w http.ResponseWriter, r *http.Request) {
 
 	city, err := g.Database.GetCity(id)
 	if err != nil {
-		http.Error(w, "failed to get city", http.StatusInternalServerError)
+		// TODO: if city is not found return a 404
+		// TODO: do a better translation of internal errors to codes and do logging instead of returning to client
+		http.Error(w, "failed to get city: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
