@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './City.css'
+import { apiRequest } from '../../shared/auth'
 
 type CityData = {
   cityName: string
@@ -15,7 +16,7 @@ const City = () => {
   const [city, setCity] = useState<CityData | null>(null)
 
   useEffect(() => {
-    fetch('/api/cities/foo', { cache: 'no-store' })
+    apiRequest('/api/cities/foo')
       .then((res) => res.json())
       .then((data) => {
         setCity(data)

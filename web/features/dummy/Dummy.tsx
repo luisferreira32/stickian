@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { apiRequest } from './auth'
+import { apiRequest } from '../../shared/auth'
 
 interface GameState {
   foo: number
