@@ -70,7 +70,7 @@ func Test_GetCity(t *testing.T) {
 			},
 			mockErr:    errors.New("a database error"),
 			wantStatus: 500,
-			wantBody:   []byte("failed to get city\n"),
+			wantBody:   []byte("a database error\n"),
 		},
 	}
 
