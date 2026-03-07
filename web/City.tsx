@@ -15,7 +15,7 @@ const City = () => {
   const [city, setCity] = useState<CityData | null>(null)
 
   useEffect(() => {
-    fetch('/api/city', { cache: 'no-store' })
+    fetch('/api/cities/foo', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         setCity(data)
