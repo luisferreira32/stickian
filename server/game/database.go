@@ -1,29 +1,57 @@
 package game
 
 type GameDatabase interface {
-	GetCity() (*City, error)
+	GetCity(id string) (*City, error)
+	GetCities(a, b Location) ([]*City, error)
 }
 
 // InMemoryDatabase is a placeholder for an actual database implementation.
 type InMemoryDatabase struct{}
 
-func (db *InMemoryDatabase) GetCity() (*City, error) {
+func (db *InMemoryDatabase) GetCity(_ string) (*City, error) {
 	// This is just a stub. In a real implementation, you would query your database here.
 	return &City{
 		Name: "Stick City",
-		Buildings: Buildings{
+		Buildings: &Buildings{
 			CityHall:    4,
 			Farm:        2,
 			Quarry:      2,
 			Lumbermill:  2,
 			CrystalMine: 3,
 		},
-		Resources: Resources{
+		Resources: &Resources{
 			Population: 45,
 			Stone:      215,
 			Sticks:     312,
 			Crystal:    145,
 			Gold:       18,
 		},
+		Location: &Location{
+			X: 10,
+			Y: 10,
+		},
+		Player: "Stickman",
 	}, nil
+}
+
+// GetCities gets all cities within the specified area defined by two locations (a and b).
+func (db *InMemoryDatabase) GetCities(_, _ Location) ([]*City, error) {
+	// This is just a stub. In a real implementation, you would query your database here.
+	city1 := &City{
+		Name: "Stick City",
+		Location: &Location{
+			X: 10,
+			Y: 10,
+		},
+		Player: "Stickman",
+	}
+	city2 := &City{
+		Name: "Stickville",
+		Location: &Location{
+			X: 15,
+			Y: 11,
+		},
+		Player: "Stickwoman",
+	}
+	return []*City{city1, city2}, nil
 }

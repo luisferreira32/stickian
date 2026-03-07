@@ -63,7 +63,8 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	mux.HandleFunc("GET /api/foobar", chainMiddleware(dummySvc.GetFooBar, middlewares...))
 	mux.HandleFunc("GET /api/select1", chainMiddleware(dummySvc.Select1, middlewares...))
 	// game endpoints
-	mux.HandleFunc("GET /api/city", chainMiddleware(gameSvc.GetCity, middlewares...))
+	mux.HandleFunc("GET /api/cities/{id}", chainMiddleware(gameSvc.GetCity, middlewares...))
+	mux.HandleFunc("GET /api/cities", chainMiddleware(gameSvc.GetCities, middlewares...))
 	// user endpoints
 	mux.HandleFunc("POST /api/login", chainMiddleware(userSvc.Login, middlewares...))
 	mux.HandleFunc("POST /api/signup", chainMiddleware(userSvc.Signup, middlewares...))
