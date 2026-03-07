@@ -2,9 +2,10 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
-	"github.com/luisferreira32/stickian/server/httputils"
+	"github.com/luisferreira32/stickian/server/internal/utils"
 )
 
 // City defines the structure of a city in the game.
@@ -48,15 +49,13 @@ func (g *GameService) GetCity(w http.ResponseWriter, r *http.Request) {
 
 	city, err := g.Database.GetCity(id)
 	if err != nil {
-		// TODO: if city is not found return a 404
-		// TODO: do a better translation of internal errors to codes and do logging instead of returning to client
-		http.Error(w, "failed to get city: "+err.Error(), http.StatusInternalServerError)
+		utils.WithError(w, err)
 		return
 	}
 
-	httputils.WithDefaultOKHeaders(w)
+	utils.WithDefaultOKHeaders(w)
 	if err := json.NewEncoder(w).Encode(city); err != nil {
-		http.Error(w, "failed to encode city", http.StatusInternalServerError)
+		utils.WithError(w, fmt.Errorf("failed to encode city: %w", err))
 		return
 	}
 }
@@ -74,13 +73,13 @@ func (g *GameService) GetCities(w http.ResponseWriter, r *http.Request) {
 
 	partialCities, err := g.Database.GetCities(a, b)
 	if err != nil {
-		http.Error(w, "failed to get cities", http.StatusInternalServerError)
+		utils.WithError(w, err)
 		return
 	}
 
-	httputils.WithDefaultOKHeaders(w)
+	utils.WithDefaultOKHeaders(w)
 	if err := json.NewEncoder(w).Encode(partialCities); err != nil {
-		http.Error(w, "failed to encode cities", http.StatusInternalServerError)
+		utils.WithError(w, fmt.Errorf("failed to encode cities: %w", err))
 		return
 	}
 }

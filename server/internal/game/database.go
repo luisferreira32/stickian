@@ -1,5 +1,11 @@
 package game
 
+import "errors"
+
+var (
+	ErrNotFound = errors.New("not found")
+)
+
 type GameDatabase interface {
 	GetCity(id string) (*City, error)
 	GetCities(a, b Location) ([]*City, error)

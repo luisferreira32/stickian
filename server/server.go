@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/luisferreira32/stickian/server/dummy"
-	"github.com/luisferreira32/stickian/server/game"
-	"github.com/luisferreira32/stickian/server/user"
+	"github.com/luisferreira32/stickian/server/internal/dummy"
+	"github.com/luisferreira32/stickian/server/internal/game"
+	"github.com/luisferreira32/stickian/server/internal/user"
 )
 
 func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey string, development bool) error {
