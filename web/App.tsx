@@ -1,15 +1,17 @@
 import {
+  Link,
+  Route,
   BrowserRouter as Router,
   Routes,
-  Route,
-  Link,
   useNavigate,
 } from 'react-router-dom'
-import { isAuthenticated, logout } from './auth'
-import Signup from './Signup'
-import Login from './Login'
-import Dummy from './Dummy'
 import './App.css'
+import City from './features/city/City'
+import Dummy from './features/dummy/Dummy'
+import Login from './features/login/Login'
+import Signup from './features/login/Signup'
+import { isAuthenticated, logout } from './shared/auth'
+import WorldMap from './features/map/WorldMap'
 
 const Navigation = () => {
   const navigate = useNavigate()
@@ -27,7 +29,7 @@ const Navigation = () => {
       <div className="nav-links">
         {isAuthenticated() ? (
           <>
-            <Link to="/">Home</Link>
+            <Link to="/dummy">Home</Link>
             <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
@@ -43,14 +45,19 @@ const Navigation = () => {
   )
 }
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  if (!isAuthenticated()) {
-    return <Login />
+const Fallback = () => {
+  const navigate = useNavigate()
+  if (isAuthenticated()) {
+    navigate('/dummy')
+  } else {
+    navigate('/login')
   }
-  return <>{children}</>
+  return null
 }
 
 const App = () => {
+  const authed = isAuthenticated()
+
   return (
     <Router>
       <div className="app">
@@ -59,14 +66,10 @@ const App = () => {
           <Routes>
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dummy />
-                </ProtectedRoute>
-              }
-            />
+            {authed && <Route path="/dummy" element={<Dummy />} />}
+            {authed && <Route path="/city" element={<City />} />}
+            {authed && <Route path="/city" element={<WorldMap />} />}
+            <Route path="*" element={<Fallback />} />
           </Routes>
         </div>
       </div>
