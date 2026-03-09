@@ -35,6 +35,7 @@ Regardless of service we follow some basic structuring principles:
    1. Process the request: this includes computations, any necessary database call, or only submission of events
    1. Generate a response and write it back to the caller (even if it is 202 or 204)
 1. Registration of the endpoints is done at the root service
+1. Database migrations are defined and run from `server/migrations/`, they should include any SQL for creation of tables, indexes, procedures, etc.
 
 ## Front-end
 
