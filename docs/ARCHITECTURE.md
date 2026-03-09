@@ -25,15 +25,16 @@ We can divide the back-end in:
 
 Regardless of service we follow some basic structuring principles:
 
+1. **There is only one event queue per Game world - don't create your own async processing unless there is a very good reason for it**
 1. Each top level object (e.g., _City_, or _User_) has its own file (e.g., `city.go`, or `user.go`)
-2. Services split the database layer into a `database.go`, interfaced with simple queries such that we can easily abstract it for unit tests
-3. Endpoints should be structured uniformely by always following the steps:
-   1. Read the endpoint request
-   1. Validate the request for correctness / user errors
-   1. (if applies) Validate authorizations to do the request
-   1. Process the request: this includes computations and any necessary database call
-   1. Generate a response and write it back to the caller
-4. Registration of the endpoints is done at the root service
+1. Services split the database layer into a `database.go`, interfaced with simple queries such that we can easily abstract it for unit tests
+1. Endpoints should be structured uniformely by always following the steps:
+   1. (if applicable) Read the endpoint request
+   1. (if applicable) Validate the request for correctness / user errors
+   1. (if applicable) Validate authorizations to do the request
+   1. Process the request: this includes computations, any necessary database call, or only submission of events
+   1. Generate a response and write it back to the caller (even if it is 202 or 204)
+1. Registration of the endpoints is done at the root service
 
 ## Front-end
 
