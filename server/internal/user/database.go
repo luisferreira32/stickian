@@ -14,7 +14,7 @@ var (
 
 type UserDatabase interface {
 	WriteUser(ctx context.Context, u *User) error
-	GetUser(ctx context.Context, id string) (*User, error)
+	GetUser(ctx context.Context, email string) (*User, error)
 }
 
 // InMemoryDatabase is a placeholder for an actual database implementation.
@@ -23,12 +23,12 @@ type InMemoryDatabase struct {
 }
 
 func (db *InMemoryDatabase) WriteUser(_ context.Context, u *User) error {
-	db.UserTable[u.ID] = u
+	db.UserTable[u.Email] = u
 	return nil
 }
 
-func (db *InMemoryDatabase) GetUser(_ context.Context, id string) (*User, error) {
-	u, ok := db.UserTable[id]
+func (db *InMemoryDatabase) GetUser(_ context.Context, email string) (*User, error) {
+	u, ok := db.UserTable[email]
 	if !ok {
 		return nil, errUserNotFound
 	}
@@ -46,10 +46,10 @@ func (db *PostgresDatabase) WriteUser(ctx context.Context, u *User) error {
 	return err
 }
 
-const getUserQuery = "SELECT id, email, validated_email, username, hashed_password FROM users WHERE id = $1"
+const getUserQuery = "SELECT id, email, validated_email, username, hashed_password FROM users WHERE email = $1"
 
-func (db *PostgresDatabase) GetUser(ctx context.Context, id string) (*User, error) {
-	row := db.DB.QueryRow(ctx, getUserQuery, id)
+func (db *PostgresDatabase) GetUser(ctx context.Context, email string) (*User, error) {
+	row := db.DB.QueryRow(ctx, getUserQuery, email)
 	var u User
 	err := row.Scan(&u.ID, &u.Email, &u.ValidatedEmail, &u.Username, &u.HashedPassword)
 	if errors.Is(err, pgx.ErrNoRows) {
