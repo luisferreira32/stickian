@@ -2,6 +2,8 @@ package user
 
 import (
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -125,6 +127,16 @@ func (h *UserService) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err = h.Database.GetUser(r.Context(), req.Email)
+	if err != nil && !errors.Is(err, errUserNotFound) {
+		http.Error(w, "failed to check existing user", http.StatusInternalServerError)
+		return
+	}
+	if err == nil {
+		http.Error(w, "user with this email already exists", http.StatusBadRequest)
+		return
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, "failed to hash password", http.StatusInternalServerError)
@@ -160,7 +172,7 @@ func (h *UserService) Signup(w http.ResponseWriter, r *http.Request) {
 }
 
 type LoginRequest struct {
-	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -169,8 +181,8 @@ type LoginResponse struct {
 }
 
 func validLoginRequest(req *LoginRequest) string {
-	if req.Username == "" {
-		return "username is required"
+	if req.Email == "" {
+		return "email is required"
 	}
 	if req.Password == "" {
 		return "password is required"
@@ -195,8 +207,9 @@ func (h *UserService) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.Database.GetUser(r.Context(), req.Username)
+	user, err := h.Database.GetUser(r.Context(), req.Email)
 	if err != nil {
+		log.Printf("failed to get user: %v", err)
 		http.Error(w, "invalid username or password", http.StatusUnauthorized)
 		return
 	}

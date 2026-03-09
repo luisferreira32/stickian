@@ -151,7 +151,6 @@ func (s *DummyService) Run(ctx context.Context) {
 }
 
 func (s *DummyService) tick() error {
-	start := time.Now()
 	// get all events for the current tick under processing
 	events, err := s.DummyDatabase2.GetEvents(s.tickRead)
 	if err != nil {
@@ -207,6 +206,5 @@ func (s *DummyService) tick() error {
 	}
 
 	s.tickRead++
-	log.Printf("tick %d processed (write %d), foo: %d, bar: %d, events processed: %d, took %v\n", s.tickRead-1, s.tickWrite, foo, bar, len(events), time.Since(start))
 	return nil
 }
