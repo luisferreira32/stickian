@@ -1,5 +1,6 @@
 import random, math
 import numpy as np
+from opensimplex import OpenSimplex
 import matplotlib.pyplot as plt
 import matplotlib.colors as pltc
 from scipy.stats import qmc
@@ -15,27 +16,33 @@ def norm2_distance(a, b):
 
 
 class WorldGenerator:
-    world_w = 128
-    world_h = 128
-    i_min = 10
-    isl_size = 7
-    m_cities = 3
-    max_mountain = 5
-    p_cities = 6
-    max_plains = 3
-    c_cities = 6
-    max_coast = 3
+    world_w = 100
+    world_h = 100
+    border = 5
+    i_min = 15
+    i_size = 7
+    m_min = 3
+    m_max = 6
+    p_min = 9
+    p_max = 12
+    c_min = 15
+    c_max = 18
 
     def __init__(self):
         self.world = [[0 for _ in range(self.world_w)] for _ in range(self.world_h)]
 
     def generate_map(self):
-        self.centers = self.generate_island_centers()
+        self.centers = self.generate_island_centers(self.border)
         for center in self.centers:
             x, y = center
             self.world[y][x] = 5
 
-    def generate_island_centers(self, k=30) -> list[tuple]:
+            land = self.generate_island_shape(center)
+            for l in land:
+                x, y = l
+                self.world[y][x] = 5
+
+    def generate_island_centers(self, margin, k=30) -> list[tuple]:
         """
         Fast Poisson Disk Sampling in Arbitrary Dimensions
 
@@ -47,20 +54,52 @@ class WorldGenerator:
 
         rng = np.random.default_rng()
         engine = qmc.PoissonDisk(
-            d=2, radius=self.i_min / max(self.world_w, self.world_h), 
+            d=2, radius=self.i_min / max(self.world_w-2*margin, self.world_h-2*margin), 
             rng=rng, ncandidates=k
         )
         sample = engine.fill_space()
 
         centers = []
         for x, y in sample:
-            cx = int(x * self.world_w)
-            cy = int(y * self.world_h)
+            cx = int(x * self.world_w) + self.border
+            cy = int(y * self.world_h) + self.border
+
+            cx = self.world_w if cx > self.world_w else cx
+            cy = self.world_h if cy > self.world_h else cy
             centers.append((cx, cy))
 
         return centers
 
-    def generate_island(self):
+    def generate_island_shape(self, center):
+        cx, cy = center
+        radius = 4 #random.randint(3,5)
+        valid_island = False
+
+        while not valid_island:
+            land = set()
+            noise = OpenSimplex(seed=random.randint(0, 999999))
+            for x in range(max(0, cx-radius*2), min(self.world_w, cx+radius*2)):
+                for y in range(max(0, cy-radius*2), min(self.world_h, cy+radius*2)):
+
+                    d = math.sqrt((x-cx)**2 + (y-cy)**2)
+
+                    n1 = noise.noise2(x*0.01, y*0.05)
+                    n2 = noise.noise2(x*0.1, y*0.15)
+                    # n3 = noise.noise2(x*0.25, y*0.25)
+                    nval = n1 + n2
+
+                    threshold = radius * (1 + 0.4*nval)
+
+                    if d < threshold:
+                        land.add((x, y))
+            min_size = self.m_min + self.p_min + self.c_min
+            max_size = self.m_max + self.p_max + self.c_max
+            if min_size <= len(land) <= max_size:
+                valid_island = True
+            
+        return land
+
+    def generate_islands(self):
         pass
 
     def show_map(self):
@@ -100,6 +139,7 @@ class WorldGenerator:
 
     def run(self):
         self.generate_map()
+        self.generate_islands()
         self.show_map()
 
 
