@@ -86,7 +86,7 @@ class WorldGenerator:
                     n1 = noise.noise2(x*0.01, y*0.01)
                     n2 = noise.noise2(x*0.1, y*0.1)
                     n3 = noise.noise2(x*0.3, y*0.3)
-                    nval = n1 #+ n2 + n3
+                    nval = n1 + n2 + n3
 
                     threshold = radius * (1 + 0.4*nval)
 
