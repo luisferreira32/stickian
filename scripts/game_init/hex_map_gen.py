@@ -56,7 +56,7 @@ class WorldConfig:
     c_min: int = 15
     c_max: int = 20
     noise_scale1: float = 0.01
-    noise_scale2: float = 0.05
+    noise_scale2: float = 0.10
     noise_scale3: float = 0.30
     # minimum / maximum hex-distance between island centres
     i_min: int = 15
@@ -86,7 +86,7 @@ class WorldGenerator:
         centers = self._generate_island_centers()
         for center in centers:
             land = self._generate_island_shapes(center)
-            self._generate_land_heights(land)
+            self._classify_land(land)
 
     def _generate_island_centers(self) -> None:
         """
@@ -164,6 +164,8 @@ class WorldGenerator:
         return land
 
     def _classify_land(self, land):
+        coast_count = 0
+        forest_count = 0
         for tile in land:
             is_coast = False
             for neighbor in hex_neighbors(tile):
@@ -171,9 +173,13 @@ class WorldGenerator:
                     is_coast = True
                     self.grid[neighbor] = 1
             if is_coast:
+                coast_count += 1
                 self.grid[tile] = 2
             else:
+                forest_count += 1
                 self.grid[tile] = 3
+
+        print(f"Coast: {coast_count}, Forest: {forest_count}")
     
         
         
