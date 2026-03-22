@@ -67,7 +67,7 @@ class WorldConfig:
 class WorldGenerator:
     """World generator class"""
 
-    def __init__(self, config: WorldConfig):
+    def __init__(self, config: WorldConfig) -> None:
         """Initialize the world generator.
 
         Args:
@@ -124,7 +124,7 @@ class WorldGenerator:
 
         return centers
 
-    def _generate_island_shapes(self, center) -> Set[Tuple[int, int]]:
+    def _generate_island_shapes(self, center: Tuple[int, int]) -> Set[Tuple[int, int]]:
         """Generate island shape using Perlin noise.
 
         Args:
@@ -173,7 +173,7 @@ class WorldGenerator:
 
         return island
 
-    def _get_biomes(self, island) -> Tuple[
+    def _get_biomes(self, island: Set[Tuple[int, int]]) -> Tuple[
         Set[Tuple[int, int]],
         Set[Tuple[int, int]],
         Set[Tuple[int, int]],
@@ -217,7 +217,7 @@ class WorldGenerator:
 
         return sea, coast, plains, mountains
 
-    def _classify_island(self, island) -> None:
+    def _classify_island(self, island: Set[Tuple[int, int]]) -> None:
         """Classify island into biomes.
 
         Args:
