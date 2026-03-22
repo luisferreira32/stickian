@@ -1,5 +1,5 @@
-import math, argparse
-from dataclasses import dataclass, field
+import math, argparse, os
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 from scipy.stats import qmc
 from opensimplex import OpenSimplex
@@ -42,8 +42,10 @@ TRANSLATOR = {
 @dataclass
 class WorldConfig:
     """World configurations class"""
-    cols: int = 100  # number of columns (q axis)
-    rows: int = 100  # number of rows    (r axis)
+
+    name: str = "world"
+    cols: int = 256  # number of columns (q axis)
+    rows: int = 256  # number of rows    (r axis)
     border: int = 1
     ncandidates: int = 30
     # per-island tile counts (inclusive ranges)
@@ -245,8 +247,11 @@ class WorldGenerator:
         self._generate_islands()
         return self.grid
 
-    def show_map(self) -> None:
-        """Show the map.
+    def generate_image(self, show: bool = True) -> None:
+        """Generate the map image.
+
+        Args:
+            show (bool): Whether to show the map.
 
         Returns:
             None
@@ -302,7 +307,35 @@ class WorldGenerator:
 
         ax.set_title("World Map", color="white", fontsize=12, pad=10)
         fig.tight_layout()
-        plt.show()
+
+        os.makedirs("./world_data", exist_ok=True)
+        fig.savefig(
+            f"./world_data/{self.config.name}.png",
+            bbox_inches="tight",
+            facecolor=fig.get_facecolor(),
+            edgecolor="none",
+        )
+        if show:
+            plt.show()
+        plt.close()
+
+    def save_to_file(self) -> None:
+        """Save the map to a file.
+
+        Returns:
+            None
+        """
+        lines = []
+        for q in range(self.config.cols):
+            line = ""
+            for r in range(self.config.rows):
+                line += f"{self.grid[(q, r)]},"
+            line += "\n"
+            lines.append(line)
+
+        os.makedirs("./world_data", exist_ok=True)
+        with open(f"./world_data/{self.config.name}.csv", "w") as f:
+            f.writelines(lines)
 
 
 def parse_args() -> argparse.Namespace:
@@ -312,9 +345,10 @@ def parse_args() -> argparse.Namespace:
         argparse.Namespace: Parsed arguments.
     """
     parser = argparse.ArgumentParser(description="Generate a hex map.")
-    parser.add_argument("--cols", type=int, default=50)
-    parser.add_argument("--rows", type=int, default=50)
-    parser.add_argument("--border", type=int, default=5)
+    parser.add_argument("--name", type=str, default="world")
+    parser.add_argument("--cols", type=int, default=256)
+    parser.add_argument("--rows", type=int, default=256)
+    parser.add_argument("--border", type=int, default=8)
     parser.add_argument("--ncandidates", type=int, default=30)
     parser.add_argument("--m_min", type=int, default=3)
     parser.add_argument("--m_max", type=int, default=8)
@@ -341,7 +375,8 @@ def run() -> None:
     config = WorldConfig(**vars(args))
     generator = WorldGenerator(config)
     generator.generate_map()
-    generator.show_map()
+    generator.generate_image()
+    generator.save_to_file()
 
 
 if __name__ == "__main__":
