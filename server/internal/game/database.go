@@ -9,6 +9,7 @@ var (
 type GameDatabase interface {
 	GetCity(id string) (*City, error)
 	GetCities(a, b Location) ([]*City, error)
+	GetMap(a, b Location) ([]*MapChunkRequest, error)
 }
 
 // InMemoryDatabase is a placeholder for an actual database implementation.
@@ -61,3 +62,5 @@ func (db *InMemoryDatabase) GetCities(_, _ Location) ([]*City, error) {
 	}
 	return []*City{city1, city2}, nil
 }
+
+const getMapQuery = "SELECT q, r, biome FROM world WHERE q BETWEEN $1 AND $2 AND r BETWEEN $3 AND $4"
