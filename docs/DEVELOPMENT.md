@@ -91,7 +91,7 @@ If you want to inspect the database, you can use `psql` with the dummy local dat
 psql postgres://postgres:postgres@localhost:5432/app?sslmode=disable
 ```
 
-# Database migrations
+## Database migrations
 
 The database schema is defined under [migrations](../server/migrations/) and ran with [golang-migrate](https://github.com/golang-migrate/migrate) during the server startup. The tool performs migrations in a conservative way where SQL errors might set the migration state to dirty and avoid future actions until a human intervention, read more about it on the tool. This means, for development, you might reach an inconsistent state that needs to be fixed. This section of the documentation is to help you in such situations!
 
