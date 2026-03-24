@@ -1,8 +1,30 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, CSSProperties, ChangeEvent } from 'react'
 import { apiRequest } from '../../shared/auth'
 
-const COLORS = ['royalblue', 'cornflowerblue', 'sandybrown', 'forestgreen', 'dimgray']
+const BIOME_COLORS: Record<number, string> = {
+  0: 'royalblue',      // ocean
+  1: 'cornflowerblue', // sea
+  2: 'sandybrown',     // beach
+  3: 'forestgreen',    // plains
+  4: 'dimgray'         // mountain
+}
 const HEX_SIZE = 8
+
+const inputStyle: CSSProperties = {
+  background: '#1b263b',
+  border: '1px solid #415a77',
+  color: 'white',
+  padding: '4px',
+  borderRadius: '4px',
+  width: '60px'
+}
+
+interface Coords {
+  minQ: number
+  maxQ: number
+  minR: number
+  maxR: number
+}
 
 export default function WorldMap() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -12,30 +34,47 @@ export default function WorldMap() {
   const lastMouseRef = useRef({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
 
-  useEffect(() => {
-    apiRequest('/api/map')
-      .then((res) => res.text())
-      .then((csv) => {
-        const rows = csv.trim().split('\n')
-        const data = rows.map((r) => r.split(',').filter(x => x.trim() !== '').map(Number))
+  const [coords, setCoords] = useState<Coords>({
+    minQ: 0,
+    maxQ: 50,
+    minR: 0,
+    maxR: 50
+  })
+
+  const fetchMap = () => {
+    apiRequest('/api/map', {
+      method: 'POST',
+      body: JSON.stringify({
+        MinQ: coords.minQ,
+        MaxQ: coords.maxQ,
+        MinR: coords.minR,
+        MaxR: coords.maxR
+      })
+    })
+      .then((res) => res.json())
+      .then((resJson) => {
+        const data = resJson.biome
         mapDataRef.current = data
 
         // Initial centering
         if (data.length > 0 && canvasRef.current) {
-          const cols = data.length
-          const numRows = data[0].length
-          const centerQ = cols / 2
-          const centerR = numRows / 2
-          const targetX = HEX_SIZE * (3 / 2 * centerQ)
-          const targetY = HEX_SIZE * Math.sqrt(3) * (centerR + centerQ / 2)
-          
-          transformRef.current.x = canvasRef.current.width / 2 - targetX
-          transformRef.current.y = canvasRef.current.height / 2 - targetY
+          const centerQ = (coords.minQ + coords.maxQ) / 2
+          const centerR = (coords.minR + coords.maxR) / 2
+
+          const targetX = (centerQ - centerR) * HEX_SIZE * 1.5
+          const targetY = (centerQ + centerR) * HEX_SIZE * Math.sqrt(3) / 2
+
+          transformRef.current.x = canvasRef.current.width / 2 - targetX * transformRef.current.scale
+          transformRef.current.y = canvasRef.current.height / 2 - targetY * transformRef.current.scale
         }
-        
+
         draw()
       })
       .catch((err) => console.error('Failed to fetch map data', err))
+  }
+
+  useEffect(() => {
+    fetchMap()
   }, [])
 
   const draw = () => {
@@ -60,23 +99,27 @@ export default function WorldMap() {
     ctx.scale(transformRef.current.scale, transformRef.current.scale)
 
     const cols = mapData.length
-    for (let q = 0; q < cols; q++) {
-      const rowLen = mapData[q].length
-      for (let r = 0; r < rowLen; r++) {
-        const val = mapData[q][r]
-        if (val === undefined || isNaN(val)) continue
+    for (let i = 0; i < cols; i++) {
+      const q = i + coords.minQ
+      const rowLen = mapData[i].length
+      for (let j = 0; j < rowLen; j++) {
+        const r = j + coords.minR
+        const type = mapData[i][j] // Access mapData using i, j as indices for the fetched chunk
+        if (type === undefined || isNaN(type)) continue
 
-        const x = HEX_SIZE * (3 / 2 * q)
-        const y = HEX_SIZE * Math.sqrt(3) * (r + q / 2)
+        ctx.fillStyle = BIOME_COLORS[type] //|| BIOME_COLORS[0]
 
-        ctx.fillStyle = COLORS[val] || 'black'
+        // Horizontal diamond shape (isometric-like axial transformation)
+        const x = (q - r) * HEX_SIZE * 1.5
+        const y = (q + r) * HEX_SIZE * Math.sqrt(3) / 2
+
         ctx.beginPath()
-        for (let i = 0; i < 6; i++) {
-          const angle_deg = 60 * i
+        for (let k = 0; k < 6; k++) {
+          const angle_deg = 60 * k
           const angle_rad = Math.PI / 180 * angle_deg
           const px = x + HEX_SIZE * 1.05 * Math.cos(angle_rad)
           const py = y + HEX_SIZE * 1.05 * Math.sin(angle_rad)
-          if (i === 0) ctx.moveTo(px, py)
+          if (k === 0) ctx.moveTo(px, py)
           else ctx.lineTo(px, py)
         }
         ctx.closePath()
@@ -89,16 +132,16 @@ export default function WorldMap() {
   // Handle Resize
   useEffect(() => {
     const resizeObj = new ResizeObserver(() => {
-        if (!canvasRef.current) return
-        const parent = canvasRef.current.parentElement
-        if (parent) {
-            canvasRef.current.width = parent.clientWidth
-            canvasRef.current.height = parent.clientHeight
-            draw()
-        }
+      if (!canvasRef.current) return
+      const parent = canvasRef.current.parentElement
+      if (parent) {
+        canvasRef.current.width = parent.clientWidth
+        canvasRef.current.height = parent.clientHeight
+        draw()
+      }
     })
     if (canvasRef.current?.parentElement) {
-        resizeObj.observe(canvasRef.current.parentElement)
+      resizeObj.observe(canvasRef.current.parentElement)
     }
     return () => resizeObj.disconnect()
   }, [])
@@ -107,17 +150,17 @@ export default function WorldMap() {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    
+
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
       const zoomSensitivity = 0.001
       const delta = -e.deltaY * zoomSensitivity
       const newScale = Math.min(Math.max(0.1, transformRef.current.scale * Math.exp(delta)), 10)
-      
+
       const rect = canvas.getBoundingClientRect()
       const mouseX = e.clientX - rect.left
       const mouseY = e.clientY - rect.top
-      
+
       transformRef.current.x = mouseX - (mouseX - transformRef.current.x) * (newScale / transformRef.current.scale)
       transformRef.current.y = mouseY - (mouseY - transformRef.current.y) * (newScale / transformRef.current.scale)
       transformRef.current.scale = newScale
@@ -153,7 +196,38 @@ export default function WorldMap() {
   }
 
   return (
-    <div style={{ width: '100%', height: 'calc(100vh - 80px)', overflow: 'hidden', padding: 0 }}>
+    <div style={{ width: '100%', height: 'calc(100vh - 80px)', overflow: 'hidden', padding: 0, position: 'relative' }}>
+      <div style={{
+        position: 'absolute',
+        top: 20,
+        left: 20,
+        background: 'rgba(13, 27, 42, 0.8)',
+        padding: '15px',
+        borderRadius: '8px',
+        color: 'white',
+        zIndex: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+        border: '1px solid #333'
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <label>Min Q: <input type="number" value={coords.minQ} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, minQ: parseInt(e.target.value) }))} style={inputStyle} /></label>
+          <label>Max Q: <input type="number" value={coords.maxQ} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, maxQ: parseInt(e.target.value) }))} style={inputStyle} /></label>
+          <label>Min R: <input type="number" value={coords.minR} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, minR: parseInt(e.target.value) }))} style={inputStyle} /></label>
+          <label>Max R: <input type="number" value={coords.maxR} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, maxR: parseInt(e.target.value) }))} style={inputStyle} /></label>
+        </div>
+        <button onClick={fetchMap} style={{
+          padding: '8px',
+          background: '#4a90e2',
+          border: 'none',
+          borderRadius: '4px',
+          color: 'white',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}>Fetch Map</button>
+      </div>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
