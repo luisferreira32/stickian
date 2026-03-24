@@ -40,6 +40,57 @@ export default function WorldMap() {
     minR: 0,
     maxR: 50
   })
+  const [hoveredTile, setHoveredTile] = useState<{ q: number, r: number } | null>(null)
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isDraggingRef.current) {
+      const dx = e.clientX - lastMouseRef.current.x
+      const dy = e.clientY - lastMouseRef.current.y
+      transformRef.current.x += dx
+      transformRef.current.y += dy
+      lastMouseRef.current = { x: e.clientX, y: e.clientY }
+      requestAnimationFrame(draw)
+      return
+    }
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const screenX = e.clientX - rect.left
+    const screenY = e.clientY - rect.top
+
+    // Screen to World
+    const worldX = (screenX - transformRef.current.x) / transformRef.current.scale
+    const worldY = (screenY - transformRef.current.y) / transformRef.current.scale
+
+    // Inverse transform for x = (q+r)*1.5*S, y = (q-r)*sqrt(3)/2*S
+    const xn = worldX / (1.5 * HEX_SIZE)
+    const yn = worldY / (HEX_SIZE * Math.sqrt(3) / 2)
+
+    const qf = (xn + yn) / 2
+    const rf = (xn - yn) / 2
+
+    // Hex rounding
+    let qi = Math.round(qf)
+    let ri = Math.round(rf)
+    let si = Math.round(-qf - rf)
+    const dq = Math.abs(qi - qf)
+    const dr = Math.abs(ri - rf)
+    const ds = Math.abs(si - (-qf - rf))
+
+    if (dq > dr && dq > ds) qi = -ri - si
+    else if (dr > ds) ri = -qi - si
+
+    if (mapDataRef.current) {
+      const i = qi - coords.minQ
+      const j = ri - coords.minR
+      if (mapDataRef.current[i] && mapDataRef.current[i][j] !== undefined) {
+        setHoveredTile({ q: qi, r: ri })
+      } else {
+        setHoveredTile(null)
+      }
+    }
+  }
 
   const fetchMap = () => {
     apiRequest('/api/map', {
@@ -61,8 +112,8 @@ export default function WorldMap() {
           const centerQ = (coords.minQ + coords.maxQ) / 2
           const centerR = (coords.minR + coords.maxR) / 2
 
-          const targetX = (centerQ - centerR) * HEX_SIZE * 1.5
-          const targetY = (centerQ + centerR) * HEX_SIZE * Math.sqrt(3) / 2
+          const targetX = (centerQ + centerR) * HEX_SIZE * 1.5
+          const targetY = (centerQ - centerR) * HEX_SIZE * Math.sqrt(3) / 2
 
           transformRef.current.x = canvasRef.current.width / 2 - targetX * transformRef.current.scale
           transformRef.current.y = canvasRef.current.height / 2 - targetY * transformRef.current.scale
@@ -104,14 +155,13 @@ export default function WorldMap() {
       const rowLen = mapData[i].length
       for (let j = 0; j < rowLen; j++) {
         const r = j + coords.minR
-        const type = mapData[i][j] // Access mapData using i, j as indices for the fetched chunk
+        const type = mapData[i][j]
         if (type === undefined || isNaN(type)) continue
 
-        ctx.fillStyle = BIOME_COLORS[type] //|| BIOME_COLORS[0]
+        ctx.fillStyle = BIOME_COLORS[type]
 
-        // Horizontal diamond shape (isometric-like axial transformation)
-        const x = (q - r) * HEX_SIZE * 1.5
-        const y = (q + r) * HEX_SIZE * Math.sqrt(3) / 2
+        const x = (q + r) * HEX_SIZE * 1.5
+        const y = (q - r) * HEX_SIZE * Math.sqrt(3) / 2
 
         ctx.beginPath()
         for (let k = 0; k < 6; k++) {
@@ -180,15 +230,6 @@ export default function WorldMap() {
     lastMouseRef.current = { x: e.clientX, y: e.clientY }
   }
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current) return
-    const dx = e.clientX - lastMouseRef.current.x
-    const dy = e.clientY - lastMouseRef.current.y
-    transformRef.current.x += dx
-    transformRef.current.y += dy
-    lastMouseRef.current = { x: e.clientX, y: e.clientY }
-    requestAnimationFrame(draw)
-  }
 
   const handleMouseUp = () => {
     isDraggingRef.current = false
@@ -228,6 +269,22 @@ export default function WorldMap() {
           fontWeight: 'bold'
         }}>Fetch Map</button>
       </div>
+      {hoveredTile && (
+        <div style={{
+          position: 'absolute',
+          bottom: 20,
+          left: 20,
+          background: 'rgba(13, 27, 42, 0.8)',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          color: 'white',
+          border: '1px solid #415a77',
+          zIndex: 10,
+          pointerEvents: 'none'
+        }}>
+          Q: {hoveredTile.q}, R: {hoveredTile.r}
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
