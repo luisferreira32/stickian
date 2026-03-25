@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState, CSSProperties, ChangeEvent } from 'react'
+import React, { useEffect, useRef, useState, ChangeEvent } from 'react'
 import { apiRequest } from '../../shared/auth'
+import './WorldMap.css'
 
 const BIOME_COLORS: Record<number, string> = {
   0: 'royalblue',      // ocean
@@ -9,15 +10,6 @@ const BIOME_COLORS: Record<number, string> = {
   4: 'dimgray'         // mountain
 }
 const HEX_SIZE = 8
-
-const inputStyle: CSSProperties = {
-  background: '#1b263b',
-  border: '1px solid #415a77',
-  color: 'white',
-  padding: '4px',
-  borderRadius: '4px',
-  width: '60px'
-}
 
 interface Coords {
   minQ: number
@@ -237,51 +229,18 @@ export default function WorldMap() {
   }
 
   return (
-    <div style={{ width: '100%', height: 'calc(100vh - 80px)', overflow: 'hidden', padding: 0, position: 'relative' }}>
-      <div style={{
-        position: 'absolute',
-        top: 20,
-        left: 20,
-        background: 'rgba(13, 27, 42, 0.8)',
-        padding: '15px',
-        borderRadius: '8px',
-        color: 'white',
-        zIndex: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-        border: '1px solid #333'
-      }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <label>Min Q: <input type="number" value={coords.minQ} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, minQ: parseInt(e.target.value) }))} style={inputStyle} /></label>
-          <label>Max Q: <input type="number" value={coords.maxQ} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, maxQ: parseInt(e.target.value) }))} style={inputStyle} /></label>
-          <label>Min R: <input type="number" value={coords.minR} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, minR: parseInt(e.target.value) }))} style={inputStyle} /></label>
-          <label>Max R: <input type="number" value={coords.maxR} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, maxR: parseInt(e.target.value) }))} style={inputStyle} /></label>
+    <div className="world-map">
+      <div className="world-map-controls">
+        <div className="world-map-controls-grid">
+          <label>Min Q: <input type="number" value={coords.minQ} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, minQ: parseInt(e.target.value) }))} className="world-map-controls-input" /></label>
+          <label>Max Q: <input type="number" value={coords.maxQ} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, maxQ: parseInt(e.target.value) }))} className="world-map-controls-input" /></label>
+          <label>Min R: <input type="number" value={coords.minR} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, minR: parseInt(e.target.value) }))} className="world-map-controls-input" /></label>
+          <label>Max R: <input type="number" value={coords.maxR} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, maxR: parseInt(e.target.value) }))} className="world-map-controls-input" /></label>
         </div>
-        <button onClick={fetchMap} style={{
-          padding: '8px',
-          background: '#4a90e2',
-          border: 'none',
-          borderRadius: '4px',
-          color: 'white',
-          cursor: 'pointer',
-          fontWeight: 'bold'
-        }}>Fetch Map</button>
+        <button onClick={fetchMap} className="world-map-controls-button">Fetch Map</button>
       </div>
       {hoveredTile && (
-        <div style={{
-          position: 'absolute',
-          bottom: 20,
-          left: 20,
-          background: 'rgba(13, 27, 42, 0.8)',
-          padding: '8px 12px',
-          borderRadius: '4px',
-          color: 'white',
-          border: '1px solid #415a77',
-          zIndex: 10,
-          pointerEvents: 'none'
-        }}>
+        <div className="world-map-hovered-tile">
           Q: {hoveredTile.q}, R: {hoveredTile.r}
         </div>
       )}
@@ -291,7 +250,7 @@ export default function WorldMap() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ cursor: isDragging ? 'grabbing' : 'grab', display: 'block', touchAction: 'none' }}
+        className={isDragging ? 'world-map-canvas-grabbing' : 'world-map-canvas'}
       />
     </div>
   )

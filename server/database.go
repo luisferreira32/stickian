@@ -16,6 +16,12 @@ func runMigrations(migrationsURL, databaseURL string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create migrate instance: %w", err)
 	}
+	defer func() {
+		err1, err2 := m.Close()
+		if err1 != nil || err2 != nil {
+			fmt.Printf("failed to close migrate instance: %v, %v", err1, err2)
+		}
+	}()
 	defer m.Close()
 
 	err = m.Up()

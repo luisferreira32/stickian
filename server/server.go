@@ -13,7 +13,7 @@ import (
 	"github.com/luisferreira32/stickian/server/internal/user"
 )
 
-func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey, mapFilePath string, development bool) error {
+func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey string, development bool) error {
 	middlewares := []func(http.HandlerFunc) http.HandlerFunc{
 		panicMiddleware(), // always chain the panic middleware first to prevent panics in other middlewares from crashing the server
 		authMiddleware(secretKey),
@@ -62,7 +62,7 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey, ma
 	mux.HandleFunc("POST /api/bar", chainMiddleware(dummySvc.BuildBar, middlewares...))
 	mux.HandleFunc("GET /api/foobar", chainMiddleware(dummySvc.GetFooBar, middlewares...))
 	mux.HandleFunc("GET /api/select1", chainMiddleware(dummySvc.Select1, middlewares...))
-	// game endpoints
+	// city endpoints
 	mux.HandleFunc("GET /api/cities/{id}", chainMiddleware(gameSvc.GetCity, middlewares...))
 	mux.HandleFunc("GET /api/cities", chainMiddleware(gameSvc.GetCities, middlewares...))
 	// user endpoints
