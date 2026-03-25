@@ -22,7 +22,6 @@ func runMigrations(migrationsURL, databaseURL string) error {
 			fmt.Printf("failed to close migrate instance: %v, %v", err1, err2)
 		}
 	}()
-	defer m.Close()
 
 	err = m.Up()
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {

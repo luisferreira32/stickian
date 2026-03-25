@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -17,15 +18,15 @@ type mockDatabase struct {
 	GetMapFunc    func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
-func (db *mockDatabase) GetCity(id string) (*City, error) {
+func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
 	return db.GetCityFunc(id)
 }
 
-func (db *mockDatabase) GetCities(a, b Location) ([]*City, error) {
+func (db *mockDatabase) GetCities(_ context.Context, a, b Location) ([]*City, error) {
 	return db.GetCitiesFunc(a, b)
 }
 
-func (db *mockDatabase) GetMap(minQ, maxQ, minR, maxR int) ([]*MapTile, error) {
+func (db *mockDatabase) GetMap(_ context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error) {
 	return db.GetMapFunc(minQ, maxQ, minR, maxR)
 }
 

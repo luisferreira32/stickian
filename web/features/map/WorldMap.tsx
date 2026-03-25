@@ -3,11 +3,11 @@ import { apiRequest } from '../../shared/auth'
 import './WorldMap.css'
 
 const BIOME_COLORS: Record<number, string> = {
-  0: 'royalblue',      // ocean
+  0: 'royalblue', // ocean
   1: 'cornflowerblue', // sea
-  2: 'sandybrown',     // beach
-  3: 'forestgreen',    // plains
-  4: 'dimgray'         // mountain
+  2: 'sandybrown', // beach
+  3: 'forestgreen', // plains
+  4: 'dimgray', // mountain
 }
 const HEX_SIZE = 8
 
@@ -30,9 +30,12 @@ export default function WorldMap() {
     minQ: 0,
     maxQ: 50,
     minR: 0,
-    maxR: 50
+    maxR: 50,
   })
-  const [hoveredTile, setHoveredTile] = useState<{ q: number, r: number } | null>(null)
+  const [hoveredTile, setHoveredTile] = useState<{
+    q: number
+    r: number
+  } | null>(null)
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (isDraggingRef.current) {
@@ -52,12 +55,14 @@ export default function WorldMap() {
     const screenY = e.clientY - rect.top
 
     // Screen to World
-    const worldX = (screenX - transformRef.current.x) / transformRef.current.scale
-    const worldY = (screenY - transformRef.current.y) / transformRef.current.scale
+    const worldX =
+      (screenX - transformRef.current.x) / transformRef.current.scale
+    const worldY =
+      (screenY - transformRef.current.y) / transformRef.current.scale
 
     // Inverse transform for x = (q+r)*1.5*S, y = (q-r)*sqrt(3)/2*S
     const xn = worldX / (1.5 * HEX_SIZE)
-    const yn = worldY / (HEX_SIZE * Math.sqrt(3) / 2)
+    const yn = worldY / ((HEX_SIZE * Math.sqrt(3)) / 2)
 
     const qf = (xn + yn) / 2
     const rf = (xn - yn) / 2
@@ -85,14 +90,9 @@ export default function WorldMap() {
   }
 
   const fetchMap = () => {
-    apiRequest('/api/map', {
-      method: 'POST',
-      body: JSON.stringify({
-        MinQ: coords.minQ,
-        MaxQ: coords.maxQ,
-        MinR: coords.minR,
-        MaxR: coords.maxR
-      })
+    const coordsParam = JSON.stringify(coords)
+    apiRequest(`/api/map?coords=${coordsParam}`, {
+      method: 'GET',
     })
       .then((res) => res.json())
       .then((resJson) => {
@@ -105,10 +105,12 @@ export default function WorldMap() {
           const centerR = (coords.minR + coords.maxR) / 2
 
           const targetX = (centerQ + centerR) * HEX_SIZE * 1.5
-          const targetY = (centerQ - centerR) * HEX_SIZE * Math.sqrt(3) / 2
+          const targetY = ((centerQ - centerR) * HEX_SIZE * Math.sqrt(3)) / 2
 
-          transformRef.current.x = canvasRef.current.width / 2 - targetX * transformRef.current.scale
-          transformRef.current.y = canvasRef.current.height / 2 - targetY * transformRef.current.scale
+          transformRef.current.x =
+            canvasRef.current.width / 2 - targetX * transformRef.current.scale
+          transformRef.current.y =
+            canvasRef.current.height / 2 - targetY * transformRef.current.scale
         }
 
         draw()
@@ -153,12 +155,12 @@ export default function WorldMap() {
         ctx.fillStyle = BIOME_COLORS[type]
 
         const x = (q + r) * HEX_SIZE * 1.5
-        const y = (q - r) * HEX_SIZE * Math.sqrt(3) / 2
+        const y = ((q - r) * HEX_SIZE * Math.sqrt(3)) / 2
 
         ctx.beginPath()
         for (let k = 0; k < 6; k++) {
           const angle_deg = 60 * k
-          const angle_rad = Math.PI / 180 * angle_deg
+          const angle_rad = (Math.PI / 180) * angle_deg
           const px = x + HEX_SIZE * 1.05 * Math.cos(angle_rad)
           const py = y + HEX_SIZE * 1.05 * Math.sin(angle_rad)
           if (k === 0) ctx.moveTo(px, py)
@@ -197,14 +199,23 @@ export default function WorldMap() {
       e.preventDefault()
       const zoomSensitivity = 0.001
       const delta = -e.deltaY * zoomSensitivity
-      const newScale = Math.min(Math.max(0.1, transformRef.current.scale * Math.exp(delta)), 10)
+      const newScale = Math.min(
+        Math.max(0.1, transformRef.current.scale * Math.exp(delta)),
+        10
+      )
 
       const rect = canvas.getBoundingClientRect()
       const mouseX = e.clientX - rect.left
       const mouseY = e.clientY - rect.top
 
-      transformRef.current.x = mouseX - (mouseX - transformRef.current.x) * (newScale / transformRef.current.scale)
-      transformRef.current.y = mouseY - (mouseY - transformRef.current.y) * (newScale / transformRef.current.scale)
+      transformRef.current.x =
+        mouseX -
+        (mouseX - transformRef.current.x) *
+          (newScale / transformRef.current.scale)
+      transformRef.current.y =
+        mouseY -
+        (mouseY - transformRef.current.y) *
+          (newScale / transformRef.current.scale)
       transformRef.current.scale = newScale
 
       requestAnimationFrame(draw)
@@ -222,7 +233,6 @@ export default function WorldMap() {
     lastMouseRef.current = { x: e.clientX, y: e.clientY }
   }
 
-
   const handleMouseUp = () => {
     isDraggingRef.current = false
     setIsDragging(false)
@@ -232,12 +242,66 @@ export default function WorldMap() {
     <div className="world-map">
       <div className="world-map-controls">
         <div className="world-map-controls-grid">
-          <label>Min Q: <input type="number" value={coords.minQ} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, minQ: parseInt(e.target.value) }))} className="world-map-controls-input" /></label>
-          <label>Max Q: <input type="number" value={coords.maxQ} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, maxQ: parseInt(e.target.value) }))} className="world-map-controls-input" /></label>
-          <label>Min R: <input type="number" value={coords.minR} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, minR: parseInt(e.target.value) }))} className="world-map-controls-input" /></label>
-          <label>Max R: <input type="number" value={coords.maxR} onChange={(e: ChangeEvent<HTMLInputElement>) => setCoords((prev: Coords) => ({ ...prev, maxR: parseInt(e.target.value) }))} className="world-map-controls-input" /></label>
+          <label>
+            Min Q:{' '}
+            <input
+              type="number"
+              value={coords.minQ}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setCoords((prev: Coords) => ({
+                  ...prev,
+                  minQ: parseInt(e.target.value),
+                }))
+              }
+              className="world-map-controls-input"
+            />
+          </label>
+          <label>
+            Max Q:{' '}
+            <input
+              type="number"
+              value={coords.maxQ}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setCoords((prev: Coords) => ({
+                  ...prev,
+                  maxQ: parseInt(e.target.value),
+                }))
+              }
+              className="world-map-controls-input"
+            />
+          </label>
+          <label>
+            Min R:{' '}
+            <input
+              type="number"
+              value={coords.minR}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setCoords((prev: Coords) => ({
+                  ...prev,
+                  minR: parseInt(e.target.value),
+                }))
+              }
+              className="world-map-controls-input"
+            />
+          </label>
+          <label>
+            Max R:{' '}
+            <input
+              type="number"
+              value={coords.maxR}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setCoords((prev: Coords) => ({
+                  ...prev,
+                  maxR: parseInt(e.target.value),
+                }))
+              }
+              className="world-map-controls-input"
+            />
+          </label>
         </div>
-        <button onClick={fetchMap} className="world-map-controls-button">Fetch Map</button>
+        <button onClick={fetchMap} className="world-map-controls-button">
+          Fetch Map
+        </button>
       </div>
       {hoveredTile && (
         <div className="world-map-hovered-tile">
@@ -250,7 +314,9 @@ export default function WorldMap() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className={isDragging ? 'world-map-canvas-grabbing' : 'world-map-canvas'}
+        className={
+          isDragging ? 'world-map-canvas-grabbing' : 'world-map-canvas'
+        }
       />
     </div>
   )

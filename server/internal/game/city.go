@@ -47,7 +47,7 @@ func (g *GameService) GetCity(w http.ResponseWriter, r *http.Request) {
 	// TODO: validate this city can be viewed by the user making the request
 	id := r.PathValue("id")
 
-	city, err := g.Database.GetCity(id)
+	city, err := g.Database.GetCity(r.Context(), id)
 	if err != nil {
 		utils.WithError(w, err)
 		return
@@ -64,6 +64,7 @@ func (g *GameService) GetCity(w http.ResponseWriter, r *http.Request) {
 //
 // This returns a partial city object only with name, location and player.
 func (g *GameService) GetCities(w http.ResponseWriter, r *http.Request) {
+	// TODO: cities coordinates should follow the chunk request format too
 	a := Location{}
 	b := Location{}
 
@@ -71,7 +72,7 @@ func (g *GameService) GetCities(w http.ResponseWriter, r *http.Request) {
 	_ = json.Unmarshal([]byte(r.URL.Query().Get("a")), &a)
 	_ = json.Unmarshal([]byte(r.URL.Query().Get("b")), &b)
 
-	partialCities, err := g.Database.GetCities(a, b)
+	partialCities, err := g.Database.GetCities(r.Context(), a, b)
 	if err != nil {
 		utils.WithError(w, err)
 		return

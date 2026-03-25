@@ -11,39 +11,38 @@ import (
 
 const worldSize = 256
 
-type MapChunkResponse struct {
+type GetMapChunkResponse struct {
 	Biome [][]int `json:"biome"`
 }
 
-type MapChunkRequest struct {
-	MinQ int `json:"MinQ"`
-	MaxQ int `json:"MaxQ"`
-	MinR int `json:"MinR"`
-	MaxR int `json:"MaxR"`
+type GetMapChunkRequest struct {
+	MinQ int `json:"minQ"`
+	MaxQ int `json:"maxQ"`
+	MinR int `json:"minR"`
+	MaxR int `json:"maxR"`
 }
 
-func validateMapChunkRequest(req *MapChunkRequest) error {
+func validateMapChunkRequest(req *GetMapChunkRequest) error {
 	if req.MinQ < 0 || req.MaxQ > worldSize || req.MinR < 0 || req.MaxR > worldSize {
 		return errors.New("invalid map chunk request")
 	}
 	return nil
 }
 
-func (s *GameService) GetMap(w http.ResponseWriter, r *http.Request) {
-	req := MapChunkRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+func (s *GameService) GetMapChunk(w http.ResponseWriter, r *http.Request) {
+	req := GetMapChunkRequest{}
+	err := json.Unmarshal([]byte(r.URL.Query().Get("coords")), &req)
 	if err != nil {
-		utils.WithError(w, fmt.Errorf("invalid request body: %w", err))
+		utils.WithError(w, fmt.Errorf("invalid request parameters: %w", err))
 		return
 	}
-	defer r.Body.Close()
 
 	if err := validateMapChunkRequest(&req); err != nil {
 		utils.WithError(w, err)
 		return
 	}
 
-	tiles, err := s.Database.GetMap(req.MinQ, req.MaxQ, req.MinR, req.MaxR)
+	tiles, err := s.Database.GetMap(r.Context(), req.MinQ, req.MaxQ, req.MinR, req.MaxR)
 	if err != nil {
 		utils.WithError(w, fmt.Errorf("failed to fetch map: %w", err))
 		return
@@ -67,7 +66,7 @@ func (s *GameService) GetMap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WithDefaultOKHeaders(w)
-	if err := json.NewEncoder(w).Encode(MapChunkResponse{Biome: biome}); err != nil {
+	if err := json.NewEncoder(w).Encode(GetMapChunkResponse{Biome: biome}); err != nil {
 		utils.WithError(w, fmt.Errorf("failed to encode map: %w", err))
 		return
 	}
