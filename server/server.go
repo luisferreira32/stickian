@@ -38,7 +38,7 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	}()
 
 	mux := http.NewServeMux()
-	gameSvc := &game.GameService{Database: &game.InMemoryDatabase{}}
+	gameSvc := &game.GameService{Database: &game.PostgresDatabase{DB: db}}
 	userSvc := &user.UserService{
 		SecretKey:   secretKey,
 		Database:    &user.PostgresDatabase{DB: db},
@@ -62,12 +62,14 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	mux.HandleFunc("POST /api/bar", chainMiddleware(dummySvc.BuildBar, middlewares...))
 	mux.HandleFunc("GET /api/foobar", chainMiddleware(dummySvc.GetFooBar, middlewares...))
 	mux.HandleFunc("GET /api/select1", chainMiddleware(dummySvc.Select1, middlewares...))
-	// game endpoints
+	// city endpoints
 	mux.HandleFunc("GET /api/cities/{id}", chainMiddleware(gameSvc.GetCity, middlewares...))
 	mux.HandleFunc("GET /api/cities", chainMiddleware(gameSvc.GetCities, middlewares...))
 	// user endpoints
 	mux.HandleFunc("POST /api/login", chainMiddleware(userSvc.Login, middlewares...))
 	mux.HandleFunc("POST /api/signup", chainMiddleware(userSvc.Signup, middlewares...))
+	// map endpoints
+	mux.HandleFunc("GET /api/map", chainMiddleware(gameSvc.GetMapChunk, middlewares...))
 
 	// run the server
 	server := http.Server{Addr: address, Handler: mux}

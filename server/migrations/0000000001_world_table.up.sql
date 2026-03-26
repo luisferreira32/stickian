@@ -1,0 +1,6 @@
+CREATE TABLE world IF NOT EXISTS (
+    q INTEGER NOT NULL,
+    r INTEGER NOT NULL,
+    biome INTEGER NOT NULL,
+    PRIMARY KEY (q, r)
+);

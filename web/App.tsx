@@ -30,6 +30,7 @@ const Navigation = () => {
         {isAuthenticated() ? (
           <>
             <Link to="/dummy">Home</Link>
+            <Link to="/map">World</Link>
             <button onClick={handleLogout} className="logout-btn">
               Logout
             </button>
@@ -68,7 +69,7 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             {authed && <Route path="/dummy" element={<Dummy />} />}
             {authed && <Route path="/city" element={<City />} />}
-            {authed && <Route path="/city" element={<WorldMap />} />}
+            {authed && <Route path="/map" element={<WorldMap />} />}
             <Route path="*" element={<Fallback />} />
           </Routes>
         </div>

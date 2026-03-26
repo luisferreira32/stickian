@@ -1,0 +1,81 @@
+.world-map {
+    width: 100%;
+    height: calc(100vh - 80px);
+    overflow: hidden;
+    padding: 0;
+    position: relative;
+}
+
+.world-map-controls {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(13, 27, 42, 0.8);
+    border-radius: 8px;
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    border: 1px solid #333;
+}
+
+.world-map-controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.world-map-controls-button {
+    padding: 8px;
+    background: #4a90e2;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.world-map-controls-input {
+    padding: 8px;
+    background: #4a90e2;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.world-map-hovered-tile {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(13, 27, 42, 0.8);
+    padding: 8px 12px;
+    border-radius: 4px;
+    color: white;
+    border: 1px solid #415a77;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.world-map-canvas {
+    cursor: grab;
+    display: block;
+    touch-action: none;
+}
+
+.world-map-canvas-grabbing {
+    cursor: grabbing;
+}
+
+.world-map-controls-input {
+    background: #1b263b;
+    border: 1px solid #415a77;
+    color: white;
+    padding: 4px;
+    border-radius: 4px;
+    width: 60px
+}
