@@ -1,5 +1,4 @@
-import math, argparse, os
-from dataclasses import dataclass
+import math, argparse, os, sys
 from typing import Dict, List, Optional, Set, Tuple
 from scipy.stats import qmc
 from opensimplex import OpenSimplex
@@ -9,6 +8,9 @@ import matplotlib.colors as pltc
 import matplotlib.patches as mpatches
 from matplotlib.patches import RegularPolygon
 from matplotlib.collections import PatchCollection
+import yaml
+from pydantic.dataclasses import dataclass
+
 
 AXIAL_DIRS = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1)]
 
@@ -42,10 +44,8 @@ TRANSLATOR = {
 @dataclass
 class WorldConfig:
     """World configurations class"""
-
     name: str = "world"
-    cols: int = 256  # number of columns (q axis)
-    rows: int = 256  # number of rows    (r axis)
+    size: int = 256
     border: int = 1
     ncandidates: int = 30
     # per-island tile counts (inclusive ranges)
@@ -61,7 +61,6 @@ class WorldConfig:
     # minimum hex-distance between island centres
     i_dist: int = 15
     i_radius: int = 4
-    seed: Optional[int] = None
 
 
 class WorldGenerator:
@@ -83,8 +82,8 @@ class WorldGenerator:
         Returns:
             None
         """
-        for q in range(self.config.cols):
-            for r in range(self.config.rows):
+        for q in range(self.config.size):
+            for r in range(self.config.size):
                 self.grid[(q, r)] = 0
 
     def _generate_islands(self) -> None:
@@ -104,8 +103,8 @@ class WorldGenerator:
         Returns:
             list[tuple]: Valid center list.
         """
-        search_width = self.config.cols - 2 * self.config.border
-        search_height = self.config.rows - 2 * self.config.border
+        search_width = self.config.size - 2 * self.config.border
+        search_height = self.config.size - 2 * self.config.border
 
         centers: List[Tuple[int, int]] = []
         engine = qmc.PoissonDisk(
@@ -142,11 +141,11 @@ class WorldGenerator:
 
             for x in range(
                 max(0, cx - self.config.i_radius),
-                min(self.config.cols, cx + self.config.i_radius),
+                min(self.config.size, cx + self.config.i_radius),
             ):
                 for y in range(
                     max(0, cy - self.config.i_radius),
-                    min(self.config.rows, cy + self.config.i_radius),
+                    min(self.config.size, cy + self.config.i_radius),
                 ):
                     d = hex_distance((cx, cy), (x, y))
 
@@ -326,9 +325,9 @@ class WorldGenerator:
             None
         """
         lines = []
-        for q in range(self.config.cols):
+        for q in range(self.config.size):
             line = ""
-            for r in range(self.config.rows):
+            for r in range(self.config.size):
                 line += f"{self.grid[(q, r)]},"
             line += "\n"
             lines.append(line)
@@ -336,33 +335,67 @@ class WorldGenerator:
         os.makedirs("./world_data", exist_ok=True)
         with open(f"./world_data/{self.config.name}.csv", "w") as f:
             f.writelines(lines)
+        print(f"✅ Map successfully saved at ./world_data/{self.config.name}.csv")
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse command line arguments.
+def load_configs() -> WorldConfig:
+    if len(sys.argv) != 2:
+        raise ValueError("⛔ Usage: python hex_map_gen.py <config_file>")
+
+    filename = sys.argv[1] + ".yaml" if ".yaml" not in sys.argv[1] else sys.argv[1]
+
+    with open(filename) as f:
+        data = yaml.safe_load(f)
+
+    return WorldConfig(**data)
+
+
+def validate_config(config: WorldConfig) -> None:
+    """Validate the config.
+
+    Args:
+        config (WorldConfig): The config to validate.
 
     Returns:
-        argparse.Namespace: Parsed arguments.
+        None
     """
-    parser = argparse.ArgumentParser(description="Generate a hex map.")
-    parser.add_argument("--name", type=str, default="world")
-    parser.add_argument("--cols", type=int, default=256)
-    parser.add_argument("--rows", type=int, default=256)
-    parser.add_argument("--border", type=int, default=8)
-    parser.add_argument("--ncandidates", type=int, default=30)
-    parser.add_argument("--m_min", type=int, default=3)
-    parser.add_argument("--m_max", type=int, default=8)
-    parser.add_argument("--p_min", type=int, default=9)
-    parser.add_argument("--p_max", type=int, default=14)
-    parser.add_argument("--c_min", type=int, default=15)
-    parser.add_argument("--c_max", type=int, default=20)
-    parser.add_argument("--noise_scale1", type=float, default=0.01)
-    parser.add_argument("--noise_scale2", type=float, default=0.1)
-    parser.add_argument("--noise_scale3", type=float, default=0.25)
-    parser.add_argument("--i_dist", type=int, default=15)
-    parser.add_argument("--i_radius", type=int, default=4)
-    parser.add_argument("--seed", type=int, default=None)
-    return parser.parse_args()
+    if config.size <= 0:
+        raise ValueError("⛔ Size must be positive")
+    elif config.size <= (config.i_radius + config.border) * 2:
+        raise ValueError("⛔ Size must be larger than twice the island radius plus border")
+
+    if config.border < 0:
+        raise ValueError("⛔ Border must be non-negative")
+    elif config.border >= config.size / 2:
+        raise ValueError("⛔ Border must be less than half the world size")
+    elif config.border <= config.i_radius:
+        print("⚠️ Border is too small, may result in islands over the border")
+
+    if config.ncandidates <= 0:
+        raise ValueError("⛔ Number of candidates must be positive. Suggested value: 30")
+    elif config.ncandidates > config.size * config.size:
+        raise ValueError("⛔ Number of candidates must be less than the world size")
+    elif config.ncandidates > 60:
+        print("⚠️ Number of candidates is large, may result long generation time")
+        
+    if config.m_min < 0 or config.m_max < 0 or config.p_min < 0 or config.p_max < 0 or config.c_min < 0 or config.c_max < 0:
+        raise ValueError("⛔ Tile counts must be non-negative")
+    elif config.m_min > config.m_max or config.p_min > config.p_max or config.c_min > config.c_max:
+        raise ValueError("⛔ Minimum tile count must be less than or equal to maximum tile count")
+    elif config.m_max + config.p_max + config.c_max > config.size * config.size:
+        raise ValueError("⛔ Maximum tile count must be less than the world size")
+    
+    if config.noise_scale1 <= 0 or config.noise_scale2 <= 0 or config.noise_scale3 <= 0:
+        raise ValueError("⛔ Noise scales must be positive")
+    elif config.noise_scale1 > 1 or config.noise_scale2 > 1 or config.noise_scale3 > 1:
+        print("⚠️ Noise scales are large, may result in too noisy islands")
+    
+    if config.i_dist <= 0 or config.i_radius <= 0:
+        raise ValueError("⛔ Island distance and radius must be positive")
+    elif config.i_dist < config.i_radius * 2:
+        raise ValueError("⛔ Island distance must be greater than twice the island radius")
+    elif config.i_dist > config.size / 2:
+        raise ValueError("⛔ Island distance must be less than half the world size")
 
 
 def run() -> None:
@@ -371,8 +404,8 @@ def run() -> None:
     Returns:
         None
     """
-    args = parse_args()
-    config = WorldConfig(**vars(args))
+    config = load_configs()
+    validate_config(config)
     generator = WorldGenerator(config)
     generator.generate_map()
     generator.generate_image()
