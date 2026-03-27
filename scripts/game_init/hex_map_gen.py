@@ -1,16 +1,18 @@
-import math, argparse, os, sys
-from typing import Dict, List, Optional, Set, Tuple
-from scipy.stats import qmc
-from opensimplex import OpenSimplex
-import numpy as np
-import matplotlib.pyplot as plt
+import math
+import os
+import sys
+from typing import Dict, List, Set, Tuple
+
 import matplotlib.colors as pltc
 import matplotlib.patches as mpatches
-from matplotlib.patches import RegularPolygon
-from matplotlib.collections import PatchCollection
+import matplotlib.pyplot as plt
+import numpy as np
 import yaml
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import RegularPolygon
+from opensimplex import OpenSimplex
 from pydantic.dataclasses import dataclass
-
+from scipy.stats import qmc
 
 AXIAL_DIRS = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1)]
 
@@ -44,6 +46,7 @@ TRANSLATOR = {
 @dataclass
 class WorldConfig:
     """World configurations class"""
+
     name: str = "world"
     size: int = 256
     border: int = 1
@@ -362,7 +365,9 @@ def validate_config(config: WorldConfig) -> None:
     if config.size <= 0:
         raise ValueError("⛔ Size must be positive")
     elif config.size <= (config.i_radius + config.border) * 2:
-        raise ValueError("⛔ Size must be larger than twice the island radius plus border")
+        raise ValueError(
+            "⛔ Size must be larger than twice the island radius plus border"
+        )
 
     if config.border < 0:
         raise ValueError("⛔ Border must be non-negative")
@@ -372,28 +377,45 @@ def validate_config(config: WorldConfig) -> None:
         print("⚠️ Border is too small, may result in islands over the border")
 
     if config.ncandidates <= 0:
-        raise ValueError("⛔ Number of candidates must be positive. Suggested value: 30")
+        raise ValueError(
+            "⛔ Number of candidates must be positive. Suggested value: 30"
+        )
     elif config.ncandidates > config.size * config.size:
         raise ValueError("⛔ Number of candidates must be less than the world size")
     elif config.ncandidates > 60:
         print("⚠️ Number of candidates is large, may result long generation time")
-        
-    if config.m_min < 0 or config.m_max < 0 or config.p_min < 0 or config.p_max < 0 or config.c_min < 0 or config.c_max < 0:
+
+    if (
+        config.m_min < 0
+        or config.m_max < 0
+        or config.p_min < 0
+        or config.p_max < 0
+        or config.c_min < 0
+        or config.c_max < 0
+    ):
         raise ValueError("⛔ Tile counts must be non-negative")
-    elif config.m_min > config.m_max or config.p_min > config.p_max or config.c_min > config.c_max:
-        raise ValueError("⛔ Minimum tile count must be less than or equal to maximum tile count")
+    elif (
+        config.m_min > config.m_max
+        or config.p_min > config.p_max
+        or config.c_min > config.c_max
+    ):
+        raise ValueError(
+            "⛔ Minimum tile count must be less than or equal to maximum tile count"
+        )
     elif config.m_max + config.p_max + config.c_max > config.size * config.size:
         raise ValueError("⛔ Maximum tile count must be less than the world size")
-    
+
     if config.noise_scale1 <= 0 or config.noise_scale2 <= 0 or config.noise_scale3 <= 0:
         raise ValueError("⛔ Noise scales must be positive")
     elif config.noise_scale1 > 1 or config.noise_scale2 > 1 or config.noise_scale3 > 1:
         print("⚠️ Noise scales are large, may result in too noisy islands")
-    
+
     if config.i_dist <= 0 or config.i_radius <= 0:
         raise ValueError("⛔ Island distance and radius must be positive")
     elif config.i_dist < config.i_radius * 2:
-        raise ValueError("⛔ Island distance must be greater than twice the island radius")
+        raise ValueError(
+            "⛔ Island distance must be greater than twice the island radius"
+        )
     elif config.i_dist > config.size / 2:
         raise ValueError("⛔ Island distance must be less than half the world size")
 
