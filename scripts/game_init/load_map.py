@@ -1,6 +1,7 @@
 import os
-from decouple import config
+
 import psycopg2
+from decouple import config
 
 
 def load_data():
@@ -11,20 +12,46 @@ def load_data():
 
 def write_to_db(data):
     try:
-        conn = psycopg2.connect(database = config("DATABASE_NAME"),
-                                user = config("DATABASE_USER"),
-                                password = config("DATABASE_PASSWORD"),
-                                host = config("DATABASE_HOST"),
-                                port = config("DATABASE_PORT"))
+        conn = psycopg2.connect(
+            database=config("DATABASE_NAME"),
+            user=config("DATABASE_USER"),
+            password=config("DATABASE_PASSWORD"),
+            host=config("DATABASE_HOST"),
+            port=config("DATABASE_PORT"),
+        )
     except Exception as e:
-        print(f"Error: {e}")
-        return
+        raise ValueError(f"⛔ Error: {e}")
     cursor = conn.cursor()
+
+    # verify if table exists
+    cursor.execute("""
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'world'
+        );
+    """)
+    if not cursor.fetchone()[0]:
+        cursor.close()
+        conn.close()
+        raise ValueError("⛔ Table 'world' does not exist. Please create it first.")
+
+    # verify if table is empty
+    cursor.execute("SELECT EXISTS (SELECT 1 FROM world);")
+    if cursor.fetchone()[0]:
+        cursor.close()
+        conn.close()
+        raise ValueError("⛔ Table 'world' is not empty. Please truncate it first.")
+
     for q, line in enumerate(data):
         for r, biome in enumerate(line.split(",")[:-1]):
-            values = (q, r, biome)
-            cursor.execute("INSERT INTO world (q, r, biome) VALUES (%s, %s, %s)", values)
+            cursor.execute(
+                "INSERT INTO world (q, r, biome) VALUES (%s, %s, %s)", (q, r, biome)
+            )
     conn.commit()
+    print("✅ World map data successfully inserted into database")
+
     cursor.close()
     conn.close()
 

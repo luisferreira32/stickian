@@ -1,0 +1,15 @@
+name: "world"
+size: 256
+border: 8
+ncandidates: 30
+m_min: 3
+m_max: 8
+p_min: 9
+p_max: 14
+c_min: 15
+c_max: 20
+noise_scale1: 0.01
+noise_scale2: 0.10
+noise_scale3: 0.30
+i_dist: 15
+i_radius: 4
