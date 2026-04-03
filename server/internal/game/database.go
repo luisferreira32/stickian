@@ -23,51 +23,121 @@ type GameDatabase interface {
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
-// InMemoryDatabase is a placeholder for an actual database implementation.
-type InMemoryDatabase struct{}
-
-func (db *InMemoryDatabase) GetCity(_ context.Context, _ string) (*City, error) {
-	// This is just a stub. In a real implementation, you would query your database here.
-	return &City{
-		Name:     "Stick City",
-		Q:        10,
-		R:        10,
-		Biome:    "plains",
-		Points:   100,
-		PlayerID: "Stickman",
-		Buildings: &Buildings{
-			CityHall:    4,
-			Farm:        2,
-			Quarry:      2,
-			Lumbermill:  2,
-			CrystalMine: 3,
-		},
-		Resources: &Resources{
-			Population: 45,
-			Sticks:     312,
-			Stones:     215,
-			Gems:       145,
-			Food:       500,
-			Faith:      18,
-		},
-	}, nil
+// InMemoryDatabase is a fake in-memory store for local development and testing.
+type InMemoryDatabase struct {
+	cities map[string]*City
 }
 
-// GetCities gets the city at the specified Q, R coordinate.
-func (db *InMemoryDatabase) GetCities(_ context.Context, _, _ int) (*City, error) {
-	// This is just a stub. In a real implementation, you would query your database here.
-	return &City{
-		Name:     "Stick City",
-		Q:        10,
-		R:        10,
-		Biome:    "plains",
-		PlayerID: "Stickman",
-	}, nil
+// NewInMemoryDatabase returns an InMemoryDatabase pre-populated with fake cities.
+func NewInMemoryDatabase() *InMemoryDatabase {
+	cities := []*City{
+		{
+			ID:       "city-001",
+			PlayerID: "player-001",
+			Name:     "Big Stickland",
+			Q:        10,
+			R:        10,
+			Biome:    "plains",
+			Points:   350,
+			Buildings: &Buildings{
+				CityHall: 4, Farm: 2, Quarry: 2, Lumbermill: 2, CrystalMine: 3,
+				Market: 1, Warehouse: 1,
+			},
+			Resources: &Resources{
+				Population: 45, Sticks: 312, Stones: 215, Gems: 145, Food: 500, Faith: 18,
+			},
+		},
+		{
+			ID:       "city-002",
+			PlayerID: "player-001",
+			Name:     "Wowsticks",
+			Q:        5,
+			R:        3,
+			Biome:    "mountain",
+			Points:   210,
+			Buildings: &Buildings{
+				CityHall: 3, Quarry: 4, CrystalMine: 5, Walls: 2, Barracks: 1,
+			},
+			Resources: &Resources{
+				Population: 28, Sticks: 80, Stones: 640, Gems: 310, Food: 200, Faith: 5,
+			},
+		},
+		{
+			ID:       "city-003",
+			PlayerID: "player-002",
+			Name:     "Port Cove",
+			Q:        15, R: 8,
+			Biome:  "coast",
+			Points: 480,
+			Buildings: &Buildings{
+				CityHall: 6, Farm: 5, Quarry: 5, Lumbermill: 5, CrystalMine: 5, Harbor: 1, Docks: 2, Market: 2, Tavern: 1, Embassy: 1,
+			},
+			Resources: &Resources{
+				Population: 72, Sticks: 150, Stones: 90, Gems: 60, Food: 890, Faith: 42,
+			},
+		},
+		{
+			ID:       "city-004",
+			PlayerID: "player-002",
+			Name:     "Verdant Vale",
+			Q:        20, R: 14,
+			Biome:  "plains",
+			Points: 125,
+			Buildings: &Buildings{
+				CityHall: 2, Farm: 3, Lumbermill: 3, Shrine: 1,
+			},
+			Resources: &Resources{
+				Population: 18, Sticks: 420, Stones: 55, Gems: 10, Food: 750, Faith: 88,
+			},
+		},
+		{
+			ID:       "city-005",
+			PlayerID: "player-003",
+			Name:     "Ironhold",
+			Q:        3, R: 18,
+			Biome:  "mountain",
+			Points: 560,
+			Buildings: &Buildings{
+				CityHall: 6, Quarry: 5, Walls: 4, Barracks: 3, Workshop: 2, Observatory: 1,
+			},
+			Resources: &Resources{
+				Population: 60, Sticks: 200, Stones: 980, Gems: 500, Food: 300, Faith: 12,
+			},
+		},
+	}
+
+	m := make(map[string]*City, len(cities))
+	for _, c := range cities {
+		m[c.ID] = c
+	}
+	return &InMemoryDatabase{cities: m}
 }
 
-func (db *InMemoryDatabase) GetMap(_ context.Context, _, _, _, _ int) ([]*MapTile, error) {
-	// This is just a stub.
-	return []*MapTile{}, nil
+func (db *InMemoryDatabase) GetCity(_ context.Context, id string) (*City, error) {
+	if c, ok := db.cities[id]; ok {
+		return c, nil
+	}
+	return nil, ErrNotFound
+}
+
+// GetCities returns the city at the given (q, r) hex coordinate.
+func (db *InMemoryDatabase) GetCities(_ context.Context, q, r int) (*City, error) {
+	for _, c := range db.cities {
+		if c.Q == q && c.R == r {
+			return c, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
+func (db *InMemoryDatabase) GetMap(_ context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error) {
+	var tiles []*MapTile
+	for _, c := range db.cities {
+		if c.Q >= minQ && c.Q <= maxQ && c.R >= minR && c.R <= maxR {
+			tiles = append(tiles, &MapTile{Q: c.Q, R: c.R})
+		}
+	}
+	return tiles, nil
 }
 
 type PostgresDatabase struct {
