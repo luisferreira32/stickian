@@ -19,7 +19,7 @@ type MapTile struct {
 
 type GameDatabase interface {
 	GetCity(ctx context.Context, id string) (*City, error)
-	GetCities(ctx context.Context, a, b Location) ([]*City, error)
+	GetCities(ctx context.Context, q, r int) (*City, error)
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
@@ -29,7 +29,12 @@ type InMemoryDatabase struct{}
 func (db *InMemoryDatabase) GetCity(_ context.Context, _ string) (*City, error) {
 	// This is just a stub. In a real implementation, you would query your database here.
 	return &City{
-		Name: "Stick City",
+		Name:     "Stick City",
+		Q:        10,
+		R:        10,
+		Biome:    "plains",
+		Points:   100,
+		PlayerID: "Stickman",
 		Buildings: &Buildings{
 			CityHall:    4,
 			Farm:        2,
@@ -39,39 +44,25 @@ func (db *InMemoryDatabase) GetCity(_ context.Context, _ string) (*City, error) 
 		},
 		Resources: &Resources{
 			Population: 45,
-			Stone:      215,
 			Sticks:     312,
-			Crystal:    145,
-			Gold:       18,
+			Stones:     215,
+			Gems:       145,
+			Food:       500,
+			Faith:      18,
 		},
-		Location: &Location{
-			X: 10,
-			Y: 10,
-		},
-		PlayerID: "Stickman",
 	}, nil
 }
 
-// GetCities gets all cities within the specified area defined by two locations (a and b).
-func (db *InMemoryDatabase) GetCities(_ context.Context, _, _ Location) ([]*City, error) {
+// GetCities gets the city at the specified Q, R coordinate.
+func (db *InMemoryDatabase) GetCities(_ context.Context, _, _ int) (*City, error) {
 	// This is just a stub. In a real implementation, you would query your database here.
-	city1 := &City{
-		Name: "Stick City",
-		Location: &Location{
-			X: 10,
-			Y: 10,
-		},
+	return &City{
+		Name:     "Stick City",
+		Q:        10,
+		R:        10,
+		Biome:    "plains",
 		PlayerID: "Stickman",
-	}
-	city2 := &City{
-		Name: "Stickville",
-		Location: &Location{
-			X: 15,
-			Y: 11,
-		},
-		PlayerID: "Stickwoman",
-	}
-	return []*City{city1, city2}, nil
+	}, nil
 }
 
 func (db *InMemoryDatabase) GetMap(_ context.Context, _, _, _, _ int) ([]*MapTile, error) {
@@ -83,14 +74,57 @@ type PostgresDatabase struct {
 	DB *pgx.Conn
 }
 
-func (db *PostgresDatabase) GetCity(_ context.Context, _ string) (*City, error) {
-	// TODO: implement this
-	return nil, errors.New("not implemented")
+const getCityQuery = `SELECT
+	c.id, c.player_id, c.name, c.q, c.r, c.biome, c.points,
+	cr.food, cr.sticks, cr.rocks, cr.gems, cr.population, cr.faith,
+	cb.city_hall, cb.embassy, cb.treasury, cb.tavern,
+	cb.farm, cb.lumbermill, cb.quarry, cb.crystal_mine,
+	cb.warehouse, cb.market, cb.harbor, cb.walls,
+	cb.barracks, cb.docks, cb.spy_guild, cb.library,
+	cb.workshop, cb.observatory, cb.temple, cb.shrine, cb.cathedral
+	FROM city c
+	LEFT JOIN city_resources cr ON cr.city_id = c.id
+	LEFT JOIN city_buildings cb ON cb.city_id = c.id
+	WHERE c.id = $1`
+
+func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, error) {
+	city := &City{
+		Resources: &Resources{},
+		Buildings: &Buildings{},
+	}
+	err := db.DB.QueryRow(ctx, getCityQuery, id).Scan(
+		&city.ID, &city.PlayerID, &city.Name, &city.Q, &city.R, &city.Biome, &city.Points,
+		&city.Resources.Food, &city.Resources.Sticks, &city.Resources.Stones,
+		&city.Resources.Gems, &city.Resources.Population, &city.Resources.Faith,
+		&city.Buildings.CityHall, &city.Buildings.Embassy, &city.Buildings.Treasury, &city.Buildings.Tavern,
+		&city.Buildings.Farm, &city.Buildings.Lumbermill, &city.Buildings.Quarry, &city.Buildings.CrystalMine,
+		&city.Buildings.Warehouse, &city.Buildings.Market, &city.Buildings.Harbor, &city.Buildings.Walls,
+		&city.Buildings.Barracks, &city.Buildings.Docks, &city.Buildings.SpyGuild, &city.Buildings.Library,
+		&city.Buildings.Workshop, &city.Buildings.Observatory, &city.Buildings.Temple, &city.Buildings.Shrine, &city.Buildings.Cathedral,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return city, nil
 }
 
-func (db *PostgresDatabase) GetCities(_ context.Context, _, _ Location) ([]*City, error) {
-	// TODO: implement this
-	return nil, errors.New("not implemented")
+const getCitiesByCoordQuery = `SELECT id, player_id, name, q, r, biome, points FROM city WHERE q = $1 AND r = $2`
+
+func (db *PostgresDatabase) GetCities(ctx context.Context, q, r int) (*City, error) {
+	city := &City{}
+	err := db.DB.QueryRow(ctx, getCitiesByCoordQuery, q, r).Scan(
+		&city.ID, &city.PlayerID, &city.Name, &city.Q, &city.R, &city.Biome, &city.Points,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return city, nil
 }
 
 const getMapQuery = "SELECT q, r, biome FROM world WHERE q BETWEEN $1 AND $2 AND r BETWEEN $3 AND $4"

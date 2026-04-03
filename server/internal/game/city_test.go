@@ -14,7 +14,7 @@ import (
 
 type mockDatabase struct {
 	GetCityFunc   func(id string) (*City, error)
-	GetCitiesFunc func(a, b Location) ([]*City, error)
+	GetCitiesFunc func(q, r int) (*City, error)
 	GetMapFunc    func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
@@ -22,8 +22,8 @@ func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
 	return db.GetCityFunc(id)
 }
 
-func (db *mockDatabase) GetCities(_ context.Context, a, b Location) ([]*City, error) {
-	return db.GetCitiesFunc(a, b)
+func (db *mockDatabase) GetCities(_ context.Context, q, r int) (*City, error) {
+	return db.GetCitiesFunc(q, r)
 }
 
 func (db *mockDatabase) GetMap(_ context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error) {
@@ -33,7 +33,10 @@ func (db *mockDatabase) GetMap(_ context.Context, minQ, maxQ, minR, maxR int) ([
 func makeCity(opts ...func(*City)) *City {
 	city := &City{
 		Name:     "Test City",
-		Location: &Location{X: 5, Y: 5},
+		Q:        5,
+		R:        5,
+		Biome:    "plains",
+		Points:   0,
 		PlayerID: "Test Player",
 	}
 	for _, opt := range opts {
