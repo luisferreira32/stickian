@@ -135,7 +135,15 @@ func (db *InMemoryDatabase) GetCities(_ context.Context, q1, r1, q2, r2 int) ([]
 	var cities []*City
 	for _, c := range db.cities {
 		if c.Q >= minQ && c.Q <= maxQ && c.R >= minR && c.R <= maxR {
-			cities = append(cities, c)
+			cities = append(cities, &City{
+				ID:       c.ID,
+				PlayerID: c.PlayerID,
+				Name:     c.Name,
+				Q:        c.Q,
+				R:        c.R,
+				Biome:    c.Biome,
+				Points:   c.Points,
+			})
 		}
 	}
 	return cities, nil
@@ -157,7 +165,7 @@ type PostgresDatabase struct {
 
 const getCityQuery = `SELECT
 	c.id, c.player_id, c.name, c.q, c.r, c.biome, c.points,
-	cr.food, cr.sticks, cr.rocks, cr.gems, cr.population, cr.faith,
+	cr.food, cr.sticks, cr.stones, cr.gems, cr.population, cr.faith,
 	cb.city_hall, cb.embassy, cb.treasury, cb.tavern,
 	cb.farm, cb.lumbermill, cb.quarry, cb.crystal_mine,
 	cb.warehouse, cb.market, cb.harbor, cb.walls,
