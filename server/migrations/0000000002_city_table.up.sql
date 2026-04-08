@@ -5,7 +5,7 @@ CREATE TYPE biome_type AS ENUM (
 );
 
 
-CREATE TABLE city (
+CREATE TABLE IF NOT EXISTS city (
     id          UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     player_id   UUID          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name        VARCHAR(128)  NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE city (
 );
 
 
-CREATE TABLE city_resources (
+CREATE TABLE IF NOT EXISTS city_resources (
     city_id         UUID        NOT NULL PRIMARY KEY REFERENCES city(id) ON DELETE CASCADE,
     food            INT         NOT NULL DEFAULT 0 CHECK (food >= 0),
     sticks          INT         NOT NULL DEFAULT 0 CHECK (sticks >= 0),
@@ -29,7 +29,7 @@ CREATE TABLE city_resources (
 );
 
 
-CREATE TABLE city_buildings (
+CREATE TABLE IF NOT EXISTS city_buildings (
     city_id         UUID        NOT NULL PRIMARY KEY REFERENCES city(id) ON DELETE CASCADE,
     city_hall       INT         NOT NULL DEFAULT 0,
     embassy         INT         NOT NULL DEFAULT 0,
@@ -51,5 +51,5 @@ CREATE TABLE city_buildings (
     observatory     INT         NOT NULL DEFAULT 0,
     temple          INT         NOT NULL DEFAULT 0,
     shrine          INT         NOT NULL DEFAULT 0,
-    cathedral       INT         NOT NULL DEFAULT 0,
+    cathedral       INT         NOT NULL DEFAULT 0
 );

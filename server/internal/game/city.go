@@ -76,28 +76,48 @@ func (g *GameService) GetCity(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetCities gets the city at the specified Q, R coordinate.
+// GetCities returns the city table rows for all cities whose coordinates lie
+// within the bounding box defined by vertices (q1, r1) and (q2, r2).
+// Buildings and Resources are not included in the response.
 func (g *GameService) GetCities(w http.ResponseWriter, r *http.Request) {
-	q, err := strconv.Atoi(r.URL.Query().Get("q"))
+	parseIntParam := func(name string) (int, error) {
+		v := r.URL.Query().Get(name)
+		if v == "" {
+			return 0, fmt.Errorf("missing required parameter: %s", name)
+		}
+		return strconv.Atoi(v)
+	}
+
+	q1, err := parseIntParam("q1")
 	if err != nil {
-		utils.WithError(w, fmt.Errorf("invalid q parameter: %w", err))
+		utils.WithError(w, fmt.Errorf("invalid q1 parameter: %w", err))
 		return
 	}
-	rv, err := strconv.Atoi(r.URL.Query().Get("r"))
+	r1, err := parseIntParam("r1")
 	if err != nil {
-		utils.WithError(w, fmt.Errorf("invalid r parameter: %w", err))
+		utils.WithError(w, fmt.Errorf("invalid r1 parameter: %w", err))
+		return
+	}
+	q2, err := parseIntParam("q2")
+	if err != nil {
+		utils.WithError(w, fmt.Errorf("invalid q2 parameter: %w", err))
+		return
+	}
+	r2, err := parseIntParam("r2")
+	if err != nil {
+		utils.WithError(w, fmt.Errorf("invalid r2 parameter: %w", err))
 		return
 	}
 
-	city, err := g.Database.GetCities(r.Context(), q, rv)
+	cities, err := g.Database.GetCities(r.Context(), q1, r1, q2, r2)
 	if err != nil {
 		utils.WithError(w, err)
 		return
 	}
 
 	utils.WithDefaultOKHeaders(w)
-	if err := json.NewEncoder(w).Encode(city); err != nil {
-		utils.WithError(w, fmt.Errorf("failed to encode city: %w", err))
+	if err := json.NewEncoder(w).Encode(cities); err != nil {
+		utils.WithError(w, fmt.Errorf("failed to encode cities: %w", err))
 		return
 	}
 }

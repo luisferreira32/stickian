@@ -19,7 +19,7 @@ type MapTile struct {
 
 type GameDatabase interface {
 	GetCity(ctx context.Context, id string) (*City, error)
-	GetCities(ctx context.Context, q, r int) (*City, error)
+	GetCities(ctx context.Context, q1, r1, q2, r2 int) ([]*City, error)
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
@@ -120,14 +120,25 @@ func (db *InMemoryDatabase) GetCity(_ context.Context, id string) (*City, error)
 	return nil, ErrNotFound
 }
 
-// GetCities returns the city at the given (q, r) hex coordinate.
-func (db *InMemoryDatabase) GetCities(_ context.Context, q, r int) (*City, error) {
+// GetCities returns all cities whose coordinates lie within the bounding box
+// defined by vertices (q1, r1) and (q2, r2) (inclusive). Only city table
+// fields are returned — Buildings and Resources are omitted.
+func (db *InMemoryDatabase) GetCities(_ context.Context, q1, r1, q2, r2 int) ([]*City, error) {
+	minQ, maxQ := q1, q2
+	if minQ > maxQ {
+		minQ, maxQ = maxQ, minQ
+	}
+	minR, maxR := r1, r2
+	if minR > maxR {
+		minR, maxR = maxR, minR
+	}
+	var cities []*City
 	for _, c := range db.cities {
-		if c.Q == q && c.R == r {
-			return c, nil
+		if c.Q >= minQ && c.Q <= maxQ && c.R >= minR && c.R <= maxR {
+			cities = append(cities, c)
 		}
 	}
-	return nil, ErrNotFound
+	return cities, nil
 }
 
 func (db *InMemoryDatabase) GetMap(_ context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error) {
@@ -181,20 +192,38 @@ func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, erro
 	return city, nil
 }
 
-const getCitiesByCoordQuery = `SELECT id, player_id, name, q, r, biome, points FROM city WHERE q = $1 AND r = $2`
+const getCitiesByBoundsQuery = `SELECT id, player_id, name, q, r, biome, points FROM city
+	WHERE q BETWEEN $1 AND $2 AND r BETWEEN $3 AND $4`
 
-func (db *PostgresDatabase) GetCities(ctx context.Context, q, r int) (*City, error) {
-	city := &City{}
-	err := db.DB.QueryRow(ctx, getCitiesByCoordQuery, q, r).Scan(
-		&city.ID, &city.PlayerID, &city.Name, &city.Q, &city.R, &city.Biome, &city.Points,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+// GetCities returns all cities within the bounding box defined by vertices
+// (q1, r1) and (q2, r2). The range is normalised so order does not matter.
+// Only city table fields are returned — Buildings and Resources are omitted.
+func (db *PostgresDatabase) GetCities(ctx context.Context, q1, r1, q2, r2 int) ([]*City, error) {
+	minQ, maxQ := q1, q2
+	if minQ > maxQ {
+		minQ, maxQ = maxQ, minQ
 	}
+	minR, maxR := r1, r2
+	if minR > maxR {
+		minR, maxR = maxR, minR
+	}
+	rows, err := db.DB.Query(ctx, getCitiesByBoundsQuery, minQ, maxQ, minR, maxR)
 	if err != nil {
 		return nil, err
 	}
-	return city, nil
+	defer rows.Close()
+
+	var cities []*City
+	for rows.Next() {
+		city := &City{}
+		if err := rows.Scan(
+			&city.ID, &city.PlayerID, &city.Name, &city.Q, &city.R, &city.Biome, &city.Points,
+		); err != nil {
+			return nil, err
+		}
+		cities = append(cities, city)
+	}
+	return cities, nil
 }
 
 const getMapQuery = "SELECT q, r, biome FROM world WHERE q BETWEEN $1 AND $2 AND r BETWEEN $3 AND $4"
