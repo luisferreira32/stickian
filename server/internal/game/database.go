@@ -18,145 +18,9 @@ type MapTile struct {
 }
 
 type GameDatabase interface {
-	GetCity(ctx context.Context, id string) (*City, error)
+	GetCity(ctx context.Context, id string, userID string) (*City, error)
 	GetCities(ctx context.Context, q1, r1, q2, r2 int) ([]*City, error)
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
-}
-
-// InMemoryDatabase is a fake in-memory store for local development and testing.
-type InMemoryDatabase struct {
-	cities map[string]*City
-}
-
-// NewInMemoryDatabase returns an InMemoryDatabase pre-populated with fake cities.
-func NewInMemoryDatabase() *InMemoryDatabase {
-	cities := []*City{
-		{
-			ID:       "city-001",
-			PlayerID: "player-001",
-			Name:     "Big Stickland",
-			Q:        10,
-			R:        10,
-			Biome:    "plains",
-			Points:   350,
-			Buildings: &Buildings{
-				CityHall: 4, Farm: 2, Quarry: 2, Lumbermill: 2, CrystalMine: 3,
-				Market: 1, Warehouse: 1,
-			},
-			Resources: &Resources{
-				Population: 45, Sticks: 312, Stones: 215, Gems: 145, Food: 500, Faith: 18,
-			},
-		},
-		{
-			ID:       "city-002",
-			PlayerID: "player-001",
-			Name:     "Wowsticks",
-			Q:        5,
-			R:        3,
-			Biome:    "mountain",
-			Points:   210,
-			Buildings: &Buildings{
-				CityHall: 3, Quarry: 4, CrystalMine: 5, Walls: 2, Barracks: 1,
-			},
-			Resources: &Resources{
-				Population: 28, Sticks: 80, Stones: 640, Gems: 310, Food: 200, Faith: 5,
-			},
-		},
-		{
-			ID:       "city-003",
-			PlayerID: "player-002",
-			Name:     "Port Cove",
-			Q:        15, R: 8,
-			Biome:  "coast",
-			Points: 480,
-			Buildings: &Buildings{
-				CityHall: 6, Farm: 5, Quarry: 5, Lumbermill: 5, CrystalMine: 5, Harbor: 1, Docks: 2, Market: 2, Tavern: 1, Embassy: 1,
-			},
-			Resources: &Resources{
-				Population: 72, Sticks: 150, Stones: 90, Gems: 60, Food: 890, Faith: 42,
-			},
-		},
-		{
-			ID:       "city-004",
-			PlayerID: "player-002",
-			Name:     "Verdant Vale",
-			Q:        20, R: 14,
-			Biome:  "plains",
-			Points: 125,
-			Buildings: &Buildings{
-				CityHall: 2, Farm: 3, Lumbermill: 3, Shrine: 1,
-			},
-			Resources: &Resources{
-				Population: 18, Sticks: 420, Stones: 55, Gems: 10, Food: 750, Faith: 88,
-			},
-		},
-		{
-			ID:       "city-005",
-			PlayerID: "player-003",
-			Name:     "Ironhold",
-			Q:        3, R: 18,
-			Biome:  "mountain",
-			Points: 560,
-			Buildings: &Buildings{
-				CityHall: 6, Quarry: 5, Walls: 4, Barracks: 3, Workshop: 2, Observatory: 1,
-			},
-			Resources: &Resources{
-				Population: 60, Sticks: 200, Stones: 980, Gems: 500, Food: 300, Faith: 12,
-			},
-		},
-	}
-
-	m := make(map[string]*City, len(cities))
-	for _, c := range cities {
-		m[c.ID] = c
-	}
-	return &InMemoryDatabase{cities: m}
-}
-
-func (db *InMemoryDatabase) GetCity(_ context.Context, id string) (*City, error) {
-	if c, ok := db.cities[id]; ok {
-		return c, nil
-	}
-	return nil, ErrNotFound
-}
-
-// GetCities returns all cities whose coordinates lie within the bounding box
-// defined by vertices (q1, r1) and (q2, r2) (inclusive). Only city table
-// fields are returned — Buildings and Resources are omitted.
-func (db *InMemoryDatabase) GetCities(_ context.Context, q1, r1, q2, r2 int) ([]*City, error) {
-	minQ, maxQ := q1, q2
-	if minQ > maxQ {
-		minQ, maxQ = maxQ, minQ
-	}
-	minR, maxR := r1, r2
-	if minR > maxR {
-		minR, maxR = maxR, minR
-	}
-	var cities []*City
-	for _, c := range db.cities {
-		if c.Q >= minQ && c.Q <= maxQ && c.R >= minR && c.R <= maxR {
-			cities = append(cities, &City{
-				ID:       c.ID,
-				PlayerID: c.PlayerID,
-				Name:     c.Name,
-				Q:        c.Q,
-				R:        c.R,
-				Biome:    c.Biome,
-				Points:   c.Points,
-			})
-		}
-	}
-	return cities, nil
-}
-
-func (db *InMemoryDatabase) GetMap(_ context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error) {
-	var tiles []*MapTile
-	for _, c := range db.cities {
-		if c.Q >= minQ && c.Q <= maxQ && c.R >= minR && c.R <= maxR {
-			tiles = append(tiles, &MapTile{Q: c.Q, R: c.R})
-		}
-	}
-	return tiles, nil
 }
 
 type PostgresDatabase struct {
@@ -174,14 +38,14 @@ const getCityQuery = `SELECT
 	FROM city c
 	LEFT JOIN city_resources cr ON cr.city_id = c.id
 	LEFT JOIN city_buildings cb ON cb.city_id = c.id
-	WHERE c.id = $1`
+	WHERE c.id = $1 AND c.player_id = $2`
 
-func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, error) {
+func (db *PostgresDatabase) GetCity(ctx context.Context, id string, userID string) (*City, error) {
 	city := &City{
 		Resources: &Resources{},
 		Buildings: &Buildings{},
 	}
-	err := db.DB.QueryRow(ctx, getCityQuery, id).Scan(
+	err := db.DB.QueryRow(ctx, getCityQuery, id, userID).Scan(
 		&city.ID, &city.PlayerID, &city.Name, &city.Q, &city.R, &city.Biome, &city.Points,
 		&city.Resources.Food, &city.Resources.Sticks, &city.Resources.Stones,
 		&city.Resources.Gems, &city.Resources.Population, &city.Resources.Faith,

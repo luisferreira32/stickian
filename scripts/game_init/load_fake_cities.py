@@ -2,14 +2,14 @@ import psycopg2
 from decouple import config
 import uuid
 
-admin_id = "fed6d389-b09c-4ff1-afa6-215ca3dcd449"
+admin_id = "d7b8ab94-18cb-4e4b-92ac-77671163f764"
 
 fake_cities = {
     str(uuid.uuid4()): {
         "player_id": admin_id,
         "name": "Big Stickland",
-        "q": 50,
-        "r": 50,
+        "q": 68,
+        "r": 14,
         "biome": "plains",
         "points": 350,
         "buildings": {
@@ -33,8 +33,8 @@ fake_cities = {
     str(uuid.uuid4()): {
         "player_id": admin_id,
         "name": "Wowsticks",
-        "q": 51,
-        "r": 49,
+        "q": 24,
+        "r": 73,
         "biome": "mountain",
         "points": 210,
         "buildings": {
@@ -56,8 +56,8 @@ fake_cities = {
     str(uuid.uuid4()): {
         "player_id": admin_id,
         "name": "Pila Cave",
-        "q": 53,
-        "r": 52,
+        "q": 8,
+        "r": 14,
         "biome": "coast",
         "points": 480,
         "buildings": {
@@ -84,8 +84,8 @@ fake_cities = {
     str(uuid.uuid4()): {
         "player_id": admin_id,
         "name": "Verdant Vale",
-        "q": 47,
-        "r": 48,
+        "q": 25,
+        "r": 26,
         "biome": "plains",
         "points": 125,
         "buildings": {
@@ -106,8 +106,8 @@ fake_cities = {
     str(uuid.uuid4()): {
         "player_id": admin_id,
         "name": "Ironhold",
-        "q": 49,
-        "r": 54,
+        "q": 96,
+        "r": 42,
         "biome": "mountain",
         "points": 560,
         "buildings": {

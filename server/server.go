@@ -39,9 +39,6 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 
 	mux := http.NewServeMux()
 	var gameDB game.GameDatabase = &game.PostgresDatabase{DB: db}
-	// if development {
-	// 	gameDB = game.NewInMemoryDatabase()
-	// }
 	gameSvc := &game.GameService{Database: gameDB}
 	userSvc := &user.UserService{
 		SecretKey:   secretKey,
