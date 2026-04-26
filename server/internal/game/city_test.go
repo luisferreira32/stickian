@@ -97,7 +97,8 @@ func Test_GetCity(t *testing.T) {
 			service := &GameService{Database: mockDB}
 
 			// when
-			service.GetCity(rec, testcase.request)
+			req := testcase.request.WithContext(context.WithValue(testcase.request.Context(), "sub", "test-user"))
+			service.GetCity(rec, req)
 
 			// then
 			if testcase.wantID != gotid {
