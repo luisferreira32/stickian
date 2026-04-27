@@ -148,8 +148,8 @@ func Test_GetCities(t *testing.T) {
 		{
 			name:       "missing parameter",
 			query:      "q1=0&r1=0&q2=10",
-			wantStatus: 500,
-			wantBody:   []byte("invalid r2 parameter: missing required parameter: r2\n"),
+			wantStatus: 400,
+			wantBody:   []byte("user error: invalid r2 parameter: missing required parameter: r2\n"),
 		},
 		{
 			name:       "database error",

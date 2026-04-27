@@ -5,10 +5,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
-)
-
-var (
-	ErrNotFound = errors.New("not found")
+	"github.com/luisferreira32/stickian/server/internal/utils"
 )
 
 type MapTile struct {
@@ -56,7 +53,7 @@ func (db *PostgresDatabase) GetCity(ctx context.Context, id string, userID strin
 		&city.Buildings.Workshop, &city.Buildings.Observatory, &city.Buildings.Temple, &city.Buildings.Shrine, &city.Buildings.Cathedral,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, utils.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
