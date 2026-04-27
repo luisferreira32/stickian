@@ -14,4 +14,9 @@ var (
 	//
 	// If returned in the utils.WithError function, it will be translated to a 400 response.
 	ErrUserError = errors.New("user error")
+
+	// ErrUserUnauthorized can be used by the packages to indicate an error caused by lacking of permissions.
+	//
+	// If returned in the utils.WithError function, it will be translated to a 403 response.
+	ErrUserUnauthorized = errors.New("unauthorized")
 )
