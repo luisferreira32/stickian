@@ -130,10 +130,10 @@ func Test_GetCities(t *testing.T) {
 		wantBody   []byte
 	}{
 		{
-			name:       "success",
-			query:      "q1=0&r1=0&q2=10&r2=10",
-			mockRes:    []*City{city1, city2},
-			wantQ1:     0, wantR1: 0, wantQ2: 10, wantR2: 10,
+			name:    "success",
+			query:   "q1=0&r1=0&q2=10&r2=10",
+			mockRes: []*City{city1, city2},
+			wantQ1:  0, wantR1: 0, wantQ2: 10, wantR2: 10,
 			wantStatus: 200,
 			wantBody:   unsafeToResponseBody([]*City{city1, city2}),
 		},
@@ -147,8 +147,8 @@ func Test_GetCities(t *testing.T) {
 		{
 			name:       "missing parameter",
 			query:      "q1=0&r1=0&q2=10",
-			wantStatus: 500,
-			wantBody:   []byte("invalid r2 parameter: missing required parameter: r2\n"),
+			wantStatus: 400,
+			wantBody:   []byte("user error: invalid r2 parameter: missing required parameter: r2\n"),
 		},
 		{
 			name:       "database error",

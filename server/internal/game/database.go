@@ -5,10 +5,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
-)
-
-var (
-	ErrNotFound = errors.New("not found")
+	"github.com/luisferreira32/stickian/server/internal/utils"
 )
 
 type MapTile struct {
@@ -117,7 +114,7 @@ func (db *InMemoryDatabase) GetCity(_ context.Context, id string) (*City, error)
 	if c, ok := db.cities[id]; ok {
 		return c, nil
 	}
-	return nil, ErrNotFound
+	return nil, utils.ErrNotFound
 }
 
 // GetCities returns all cities whose coordinates lie within the bounding box
@@ -192,7 +189,7 @@ func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, erro
 		&city.Buildings.Workshop, &city.Buildings.Observatory, &city.Buildings.Temple, &city.Buildings.Shrine, &city.Buildings.Cathedral,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, utils.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
