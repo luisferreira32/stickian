@@ -60,10 +60,15 @@ type Resources struct {
 
 // GetCity gets the details of a city by its ID.
 func (g *GameService) GetCity(w http.ResponseWriter, r *http.Request) {
-	// TODO: validate this city can be viewed by the user making the request
 	id := r.PathValue("id")
 
-	city, err := g.Database.GetCity(r.Context(), id)
+	userID, ok := r.Context().Value("sub").(string)
+	if !ok || userID == "" {
+		utils.WithError(w, fmt.Errorf("unauthorized"))
+		return
+	}
+
+	city, err := g.Database.GetCity(r.Context(), id, userID)
 	if err != nil {
 		utils.WithError(w, err)
 		return

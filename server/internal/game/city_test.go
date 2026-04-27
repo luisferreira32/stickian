@@ -13,13 +13,13 @@ import (
 )
 
 type mockDatabase struct {
-	GetCityFunc   func(id string) (*City, error)
+	GetCityFunc   func(id string, userID string) (*City, error)
 	GetCitiesFunc func(q1, r1, q2, r2 int) ([]*City, error)
 	GetMapFunc    func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
-func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
-	return db.GetCityFunc(id)
+func (db *mockDatabase) GetCity(_ context.Context, id string, userID string) (*City, error) {
+	return db.GetCityFunc(id, userID)
 }
 
 func (db *mockDatabase) GetCities(_ context.Context, q1, r1, q2, r2 int) ([]*City, error) {
@@ -89,7 +89,7 @@ func Test_GetCity(t *testing.T) {
 			gotid := ""
 			// given
 			mockDB := &mockDatabase{
-				GetCityFunc: func(id string) (*City, error) {
+				GetCityFunc: func(id string, userID string) (*City, error) {
 					gotid = id
 					return testcase.mockRes, testcase.mockErr
 				},
@@ -97,7 +97,8 @@ func Test_GetCity(t *testing.T) {
 			service := &GameService{Database: mockDB}
 
 			// when
-			service.GetCity(rec, testcase.request)
+			req := testcase.request.WithContext(context.WithValue(testcase.request.Context(), "sub", "test-user"))
+			service.GetCity(rec, req)
 
 			// then
 			if testcase.wantID != gotid {
@@ -130,10 +131,10 @@ func Test_GetCities(t *testing.T) {
 		wantBody   []byte
 	}{
 		{
-			name:       "success",
-			query:      "q1=0&r1=0&q2=10&r2=10",
-			mockRes:    []*City{city1, city2},
-			wantQ1:     0, wantR1: 0, wantQ2: 10, wantR2: 10,
+			name:    "success",
+			query:   "q1=0&r1=0&q2=10&r2=10",
+			mockRes: []*City{city1, city2},
+			wantQ1:  0, wantR1: 0, wantQ2: 10, wantR2: 10,
 			wantStatus: 200,
 			wantBody:   unsafeToResponseBody([]*City{city1, city2}),
 		},
