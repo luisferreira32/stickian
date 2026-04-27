@@ -71,6 +71,8 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	mux.HandleFunc("POST /api/signup", chainMiddleware(userSvc.Signup, middlewares...))
 	// map endpoints
 	mux.HandleFunc("GET /api/map", chainMiddleware(gameSvc.GetMapChunk, middlewares...))
+	// game endpoints
+	mux.HandleFunc("POST /api/joinworld", chainMiddleware(gameSvc.JoinWorld, middlewares...))
 
 	// run the server
 	server := http.Server{Addr: address, Handler: mux}
