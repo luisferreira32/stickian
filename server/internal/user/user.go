@@ -10,10 +10,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
-)
 
-const (
-	maxRead = 1024 * 1024
+	"github.com/luisferreira32/stickian/server/internal/utils"
 )
 
 type UserService struct {
@@ -111,7 +109,7 @@ func validSignupRequest(req *SignupRequest, isDevelopment bool) string {
 }
 
 func (h *UserService) Signup(w http.ResponseWriter, r *http.Request) {
-	bodyReader := http.MaxBytesReader(w, r.Body, maxRead)
+	bodyReader := http.MaxBytesReader(w, r.Body, utils.MaxRead)
 	defer func() {
 		_ = bodyReader.Close()
 	}()
@@ -191,7 +189,7 @@ func validLoginRequest(req *LoginRequest) string {
 }
 
 func (h *UserService) Login(w http.ResponseWriter, r *http.Request) {
-	bodyReader := http.MaxBytesReader(w, r.Body, maxRead)
+	bodyReader := http.MaxBytesReader(w, r.Body, utils.MaxRead)
 	defer func() {
 		_ = bodyReader.Close()
 	}()

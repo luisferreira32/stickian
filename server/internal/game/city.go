@@ -95,22 +95,22 @@ func (g *GameService) GetCities(w http.ResponseWriter, r *http.Request) {
 
 	q1, err := parseIntParam("q1")
 	if err != nil {
-		utils.WithError(w, fmt.Errorf("invalid q1 parameter: %w", err))
+		utils.WithError(w, fmt.Errorf("%w: invalid q1 parameter: %w", utils.ErrUserError, err))
 		return
 	}
 	r1, err := parseIntParam("r1")
 	if err != nil {
-		utils.WithError(w, fmt.Errorf("invalid r1 parameter: %w", err))
+		utils.WithError(w, fmt.Errorf("%w: invalid r1 parameter: %w", utils.ErrUserError, err))
 		return
 	}
 	q2, err := parseIntParam("q2")
 	if err != nil {
-		utils.WithError(w, fmt.Errorf("invalid q2 parameter: %w", err))
+		utils.WithError(w, fmt.Errorf("%w: invalid q2 parameter: %w", utils.ErrUserError, err))
 		return
 	}
 	r2, err := parseIntParam("r2")
 	if err != nil {
-		utils.WithError(w, fmt.Errorf("invalid r2 parameter: %w", err))
+		utils.WithError(w, fmt.Errorf("%w: invalid r2 parameter: %w", utils.ErrUserError, err))
 		return
 	}
 
