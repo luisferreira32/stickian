@@ -51,7 +51,7 @@ def write_to_db(data, settleable):
 
     for q, line in enumerate(data):
         for r, biome in enumerate(line.split(",")[:-1]):
-            is_settleable = 1 if (q, r) in settleable else 0
+            is_settleable = "true" if [q, r] in settleable else "false"
             cursor.execute(
                 "INSERT INTO world (q, r, settleable, biome) VALUES (%s, %s, %s, %s)", (q, r, is_settleable, biome)
             )

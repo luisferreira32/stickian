@@ -1,8 +1,9 @@
 import psycopg2
 from decouple import config
 import uuid
+import random
 
-admin_id = "d7b8ab94-18cb-4e4b-92ac-77671163f764"
+admin_id = "115a612f-c6bc-42b7-9622-cba5a711a609"
 
 fake_cities = {
     str(uuid.uuid4()): {
@@ -226,10 +227,23 @@ def write_to_db(data):
         conn.close()
         raise ValueError("⛔ Table 'city' does not exist. Please create it first.")
 
-    for id, city in fake_cities.items():
-        insert_city(cursor, city, id)
-        insert_city_resources(cursor, city, id)
-        insert_city_buildings(cursor, city, id)
+    cursor.execute("SELECT q, r, biome FROM world WHERE settleable = 'true';")
+    settleable_tiles = cursor.fetchall()
+
+
+
+    if len(settleable_tiles) < len(fake_cities):
+        raise ValueError("Not enough settleable tiles for fake cities.")
+
+    sampled_tiles = random.sample(settleable_tiles, len(fake_cities))
+
+    for (city_id, city), tile in zip(fake_cities.items(), sampled_tiles):
+        city["q"] = tile[0]
+        city["r"] = tile[1]
+        city["biome"] = tile[2]
+        insert_city(cursor, city, city_id)
+        insert_city_resources(cursor, city, city_id)
+        insert_city_buildings(cursor, city, city_id)
     conn.commit()
     print("✅ Cities data successfully inserted into databases")
 
