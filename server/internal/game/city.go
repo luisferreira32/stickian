@@ -64,13 +64,18 @@ func (g *GameService) GetCity(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := r.Context().Value("sub").(string)
 	if !ok || userID == "" {
-		utils.WithError(w, fmt.Errorf("unauthorized"))
+		utils.WithError(w, utils.ErrUnauthorized)
 		return
 	}
 
-	city, err := g.Database.GetCity(r.Context(), id, userID)
+	city, err := g.Database.GetCity(r.Context(), id)
 	if err != nil {
 		utils.WithError(w, err)
+		return
+	}
+
+	if city.PlayerID != userID {
+		utils.WithError(w, utils.ErrForbidden)
 		return
 	}
 

@@ -5,10 +5,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
-)
-
-var (
-	ErrNotFound = errors.New("not found")
+	"github.com/luisferreira32/stickian/server/internal/utils"
 )
 
 type MapTile struct {
@@ -18,7 +15,7 @@ type MapTile struct {
 }
 
 type GameDatabase interface {
-	GetCity(ctx context.Context, id string, userID string) (*City, error)
+	GetCity(ctx context.Context, id string) (*City, error)
 	GetCities(ctx context.Context, q1, r1, q2, r2 int) ([]*City, error)
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
@@ -38,14 +35,14 @@ const getCityQuery = `SELECT
 	FROM city c
 	LEFT JOIN city_resources cr ON cr.city_id = c.id
 	LEFT JOIN city_buildings cb ON cb.city_id = c.id
-	WHERE c.id = $1 AND c.player_id = $2`
+	WHERE c.id = $1`
 
-func (db *PostgresDatabase) GetCity(ctx context.Context, id string, userID string) (*City, error) {
+func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, error) {
 	city := &City{
 		Resources: &Resources{},
 		Buildings: &Buildings{},
 	}
-	err := db.DB.QueryRow(ctx, getCityQuery, id, userID).Scan(
+	err := db.DB.QueryRow(ctx, getCityQuery, id).Scan(
 		&city.ID, &city.PlayerID, &city.Name, &city.Q, &city.R, &city.Biome, &city.Points,
 		&city.Resources.Food, &city.Resources.Sticks, &city.Resources.Stones,
 		&city.Resources.Gems, &city.Resources.Population, &city.Resources.Faith,
@@ -56,7 +53,7 @@ func (db *PostgresDatabase) GetCity(ctx context.Context, id string, userID strin
 		&city.Buildings.Workshop, &city.Buildings.Observatory, &city.Buildings.Temple, &city.Buildings.Shrine, &city.Buildings.Cathedral,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrNotFound
+		return nil, utils.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
