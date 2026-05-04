@@ -13,9 +13,10 @@ import (
 )
 
 type mockDatabase struct {
-	GetCityFunc   func(id string) (*City, error)
-	GetCitiesFunc func(q1, r1, q2, r2 int) ([]*City, error)
-	GetMapFunc    func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
+	GetCityFunc    func(id string, userID string) (*City, error)
+	GetCitiesFunc  func(q1, r1, q2, r2 int) ([]*City, error)
+	CreateCityFunc func(c *City) error
+	GetMapFunc     func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
 func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
@@ -24,6 +25,10 @@ func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
 
 func (db *mockDatabase) GetCities(_ context.Context, q1, r1, q2, r2 int) ([]*City, error) {
 	return db.GetCitiesFunc(q1, r1, q2, r2)
+}
+
+func (db *mockDatabase) CreateCity(_ context.Context, c *City) error {
+	return db.CreateCityFunc(c)
 }
 
 func (db *mockDatabase) GetMap(_ context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error) {
@@ -148,8 +153,8 @@ func Test_GetCities(t *testing.T) {
 		{
 			name:       "missing parameter",
 			query:      "q1=0&r1=0&q2=10",
-			wantStatus: 500,
-			wantBody:   []byte("invalid r2 parameter: missing required parameter: r2\n"),
+			wantStatus: 400,
+			wantBody:   []byte("user error: invalid r2 parameter: missing required parameter: r2\n"),
 		},
 		{
 			name:       "database error",

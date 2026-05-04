@@ -17,24 +17,6 @@ type UserDatabase interface {
 	GetUser(ctx context.Context, email string) (*User, error)
 }
 
-// InMemoryDatabase is a placeholder for an actual database implementation.
-type InMemoryDatabase struct {
-	UserTable map[string]*User
-}
-
-func (db *InMemoryDatabase) WriteUser(_ context.Context, u *User) error {
-	db.UserTable[u.Email] = u
-	return nil
-}
-
-func (db *InMemoryDatabase) GetUser(_ context.Context, email string) (*User, error) {
-	u, ok := db.UserTable[email]
-	if !ok {
-		return nil, errUserNotFound
-	}
-	return u, nil
-}
-
 type PostgresDatabase struct {
 	DB *pgx.Conn
 }

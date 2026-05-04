@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/luisferreira32/stickian/server/internal/utils"
@@ -17,6 +18,7 @@ type MapTile struct {
 type GameDatabase interface {
 	GetCity(ctx context.Context, id string) (*City, error)
 	GetCities(ctx context.Context, q1, r1, q2, r2 int) ([]*City, error)
+	CreateCity(ctx context.Context, c *City) error
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
@@ -42,15 +44,41 @@ func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, erro
 		Resources: &Resources{},
 		Buildings: &Buildings{},
 	}
-	err := db.DB.QueryRow(ctx, getCityQuery, id).Scan(
-		&city.ID, &city.PlayerID, &city.Name, &city.Q, &city.R, &city.Biome, &city.Points,
-		&city.Resources.Food, &city.Resources.Sticks, &city.Resources.Stones,
-		&city.Resources.Gems, &city.Resources.Population, &city.Resources.Faith,
-		&city.Buildings.CityHall, &city.Buildings.Embassy, &city.Buildings.Treasury, &city.Buildings.Tavern,
-		&city.Buildings.Farm, &city.Buildings.Lumbermill, &city.Buildings.Quarry, &city.Buildings.CrystalMine,
-		&city.Buildings.Warehouse, &city.Buildings.Market, &city.Buildings.Harbor, &city.Buildings.Walls,
-		&city.Buildings.Barracks, &city.Buildings.Docks, &city.Buildings.SpyGuild, &city.Buildings.Library,
-		&city.Buildings.Workshop, &city.Buildings.Observatory, &city.Buildings.Temple, &city.Buildings.Shrine, &city.Buildings.Cathedral,
+	err := db.DB.QueryRow(ctx, getCityQuery, id, userID).Scan(
+		&city.ID,
+		&city.PlayerID,
+		&city.Name,
+		&city.Q,
+		&city.R,
+		&city.Biome,
+		&city.Points,
+		&city.Resources.Food,
+		&city.Resources.Sticks,
+		&city.Resources.Stones,
+		&city.Resources.Gems,
+		&city.Resources.Population,
+		&city.Resources.Faith,
+		&city.Buildings.CityHall,
+		&city.Buildings.Embassy,
+		&city.Buildings.Treasury,
+		&city.Buildings.Tavern,
+		&city.Buildings.Farm,
+		&city.Buildings.Lumbermill,
+		&city.Buildings.Quarry,
+		&city.Buildings.CrystalMine,
+		&city.Buildings.Warehouse,
+		&city.Buildings.Market,
+		&city.Buildings.Harbor,
+		&city.Buildings.Walls,
+		&city.Buildings.Barracks,
+		&city.Buildings.Docks,
+		&city.Buildings.SpyGuild,
+		&city.Buildings.Library,
+		&city.Buildings.Workshop,
+		&city.Buildings.Observatory,
+		&city.Buildings.Temple,
+		&city.Buildings.Shrine,
+		&city.Buildings.Cathedral,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, utils.ErrNotFound
@@ -93,6 +121,74 @@ func (db *PostgresDatabase) GetCities(ctx context.Context, q1, r1, q2, r2 int) (
 		cities = append(cities, city)
 	}
 	return cities, nil
+}
+
+const createCityQuery = `INSERT INTO city (id, player_id, name, q, r, biome, points)
+	VALUES ($1, $2, $3, $4, $5, $6, $7)
+	ON CONFLICT DO NOTHING`
+
+const createCityResourcesQuery = `INSERT INTO city_resources (city_id, food, sticks, stones, gems, population, faith)
+	VALUES ($1, $2, $3, $4, $5, $6, $7)
+	ON CONFLICT DO NOTHING`
+
+const createCityBuildingsQuery = `INSERT INTO city_buildings (city_id, city_hall, embassy, treasury, tavern, farm, lumbermill, quarry, crystal_mine, warehouse, market, harbor, walls, barracks, docks, spy_guild, library, workshop, observatory, temple, shrine, cathedral)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+	ON CONFLICT DO NOTHING`
+
+func (db *PostgresDatabase) CreateCity(ctx context.Context, c *City) error {
+	_, err := db.DB.Exec(ctx, createCityQuery,
+		c.ID,
+		c.PlayerID,
+		c.Name,
+		c.Q,
+		c.R,
+		c.Biome,
+		c.Points,
+	)
+	if err != nil {
+		return fmt.Errorf("city creation: %w", err)
+	}
+	_, err = db.DB.Exec(ctx, createCityResourcesQuery,
+		c.ID,
+		c.Resources.Food,
+		c.Resources.Sticks,
+		c.Resources.Stones,
+		c.Resources.Gems,
+		c.Resources.Population,
+		c.Resources.Faith,
+	)
+	if err != nil {
+		return fmt.Errorf("city resources: %w", err)
+	}
+	_, err = db.DB.Exec(ctx, createCityBuildingsQuery,
+		c.ID,
+		c.Buildings.CityHall,
+		c.Buildings.Embassy,
+		c.Buildings.Treasury,
+		c.Buildings.Tavern,
+		c.Buildings.Farm,
+		c.Buildings.Lumbermill,
+		c.Buildings.Quarry,
+		c.Buildings.CrystalMine,
+		c.Buildings.Warehouse,
+		c.Buildings.Market,
+		c.Buildings.Harbor,
+		c.Buildings.Walls,
+		c.Buildings.Barracks,
+		c.Buildings.Docks,
+		c.Buildings.SpyGuild,
+		c.Buildings.Library,
+		c.Buildings.Workshop,
+		c.Buildings.Observatory,
+		c.Buildings.Temple,
+		c.Buildings.Shrine,
+		c.Buildings.Cathedral,
+	)
+	if err != nil {
+		return fmt.Errorf("city buildings: %w", err)
+	}
+
+	return nil
 }
 
 const getMapQuery = "SELECT q, r, biome FROM world WHERE q BETWEEN $1 AND $2 AND r BETWEEN $3 AND $4"
