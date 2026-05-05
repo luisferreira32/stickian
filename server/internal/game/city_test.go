@@ -13,7 +13,7 @@ import (
 )
 
 type mockDatabase struct {
-	GetCityFunc    func(id string, userID string) (*City, error)
+	GetCityFunc    func(id string) (*City, error)
 	GetCitiesFunc  func(q1, r1, q2, r2 int) ([]*City, error)
 	CreateCityFunc func(c *City) error
 	GetMapFunc     func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)

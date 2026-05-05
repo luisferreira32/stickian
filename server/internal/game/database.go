@@ -44,7 +44,7 @@ func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, erro
 		Resources: &Resources{},
 		Buildings: &Buildings{},
 	}
-	err := db.DB.QueryRow(ctx, getCityQuery, id, userID).Scan(
+	err := db.DB.QueryRow(ctx, getCityQuery, id).Scan(
 		&city.ID,
 		&city.PlayerID,
 		&city.Name,

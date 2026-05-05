@@ -30,7 +30,7 @@ func WithError(w http.ResponseWriter, err error) {
 		http.Error(w, err.Error(), http.StatusForbidden)
 	case errors.Is(err, ErrNotFound):
 		http.Error(w, err.Error(), http.StatusNotFound)
-	case errors.Is(err, ErrUserUnauthorized):
+	case errors.Is(err, ErrUnauthorized):
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 	default:
 		// TODO: do a better translation of internal errors to codes

@@ -53,7 +53,7 @@ def write_to_db(data, settleable):
         for r, biome in enumerate(line.split(",")[:-1]):
             is_settleable = "true" if [q, r] in settleable else "false"
             cursor.execute(
-                "INSERT INTO world (q, r, settleable, biome) VALUES (%s, %s, %s, %s)", (q, r, is_settleable, biome)
+                "INSERT INTO world (q, r, biome, settleable) VALUES (%s, %s, %s, %s)", (q, r, biome, is_settleable)
             )
     conn.commit()
     print("✅ World map data successfully inserted into database")

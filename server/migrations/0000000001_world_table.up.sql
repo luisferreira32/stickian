@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS world (
-    q INTEGER NOT NULL,
-    r INTEGER NOT NULL,
-    settleable BOOLEAN NOT NULL,
-    biome INTEGER NOT NULL,
+    q           INT           NOT NULL,
+    r           INT           NOT NULL,
+    biome       INT           NOT NULL,
+    settleable  BOOLEAN       NOT NULL,
     PRIMARY KEY (q, r)
 );

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS city (
     name        VARCHAR(128)  NOT NULL,
     q           INT           NOT NULL,
     r           INT           NOT NULL,
-    biome       INT    NOT NULL, 
+    biome       INT           NOT NULL, 
     points      INT           NOT NULL DEFAULT 0,
 
     CONSTRAINT city_unique_coords UNIQUE (q, r)

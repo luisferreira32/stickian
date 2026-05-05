@@ -73,7 +73,7 @@ func (g *GameService) JoinWorld(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := r.Context().Value("sub").(string)
 	if !ok || userID == "" {
-		utils.WithError(w, utils.ErrUserUnauthorized)
+		utils.WithError(w, utils.ErrUnauthorized)
 		return
 	}
 
