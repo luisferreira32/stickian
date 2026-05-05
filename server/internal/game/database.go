@@ -20,6 +20,7 @@ type GameDatabase interface {
 	GetCities(ctx context.Context, q1, r1, q2, r2 int) ([]*City, error)
 	CreateCity(ctx context.Context, c *City) error
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
+	GetNextCitySpot(ctx context.Context) (*MapTile, error)
 }
 
 type PostgresDatabase struct {
@@ -191,7 +192,7 @@ func (db *PostgresDatabase) CreateCity(ctx context.Context, c *City) error {
 	return nil
 }
 
-const getMapQuery = "SELECT q, r, biome FROM world WHERE q BETWEEN $1 AND $2 AND r BETWEEN $3 AND $4"
+const getMapQuery = `SELECT q, r, biome FROM world WHERE q BETWEEN $1 AND $2 AND r BETWEEN $3 AND $4`
 
 func (db *PostgresDatabase) GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error) {
 	rows, err := db.DB.Query(ctx, getMapQuery, minQ, maxQ, minR, maxR)
@@ -211,4 +212,31 @@ func (db *PostgresDatabase) GetMap(ctx context.Context, minQ, maxQ, minR, maxR i
 	}
 
 	return tiles, nil
+}
+
+const getNextCitySpotQuery = `
+SELECT w.q, w.r, w.biome 
+FROM world w
+LEFT JOIN city c ON w.q = c.q AND w.r = c.r
+WHERE w.settleable=true
+AND c.id IS NULL
+ORDER BY w.q+w.r
+LIMIT 1`
+
+// GetNextCitySpot returns the next available spot for a new city.
+//
+// The spot is determined by the lowest sum of q and r coordinates, which creates a diagonal pattern
+// of city placement starting from the origin (0, 0) and moving outward. Only settleable tiles that
+// are not already occupied by a city are considered.
+func (db *PostgresDatabase) GetNextCitySpot(ctx context.Context) (*MapTile, error) {
+	row := db.DB.QueryRow(ctx, getNextCitySpotQuery)
+	var t MapTile
+	err := row.Scan(&t.Q, &t.R, &t.Biome)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, utils.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
 }

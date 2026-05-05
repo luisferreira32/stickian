@@ -19,7 +19,7 @@ type City struct {
 	Name      string     `json:"cityName"`
 	Q         int        `json:"q"`
 	R         int        `json:"r"`
-	Biome     string     `json:"biome"`
+	Biome     int        `json:"biome"`
 	Points    int        `json:"points"`
 	Buildings *Buildings `json:"buildings,omitempty"`
 	Resources *Resources `json:"resources,omitempty"`
