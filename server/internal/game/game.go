@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/luisferreira32/stickian/server/internal/utils"
 )
@@ -27,6 +28,8 @@ var (
 
 type GameService struct {
 	Database GameDatabase
+
+	settleLock sync.Mutex
 }
 
 type JoinWorldRequest struct {
@@ -83,15 +86,30 @@ func (g *GameService) JoinWorld(w http.ResponseWriter, r *http.Request) {
 		ID:        userID,
 		PlayerID:  userID,
 		Name:      req.CityName,
-		Q:         0,          // TODO: figure out once we know which spots of the map are buildable where the first city will land
-		R:         0,          // TODO: figure out once we know which spots of the map are buildable where the first city will land
-		Biome:     "mountain", // TODO: figure out once we know which spots of the map are buildable where the first city will land
 		Points:    0,
 		Buildings: &Buildings{},
 		Resources: InitialResources,
 	}
 
-	err := g.Database.CreateCity(r.Context(), newCity)
+	// HACK: to avoid collisions we can have a shared lock on our monolith server!
+	var (
+		citySpot *MapTile
+		err      error
+	)
+	func() {
+		g.settleLock.Lock()
+		defer g.settleLock.Unlock()
+		citySpot, err = g.Database.GetNextCitySpot(r.Context())
+	}()
+	if err != nil {
+		utils.WithError(w, fmt.Errorf("failed to get next city spot: %w", err))
+		return
+	}
+	newCity.Q = citySpot.Q
+	newCity.R = citySpot.R
+	newCity.Biome = citySpot.Biome
+
+	err = g.Database.CreateCity(r.Context(), newCity)
 	if err != nil {
 		utils.WithError(w, err)
 		return
