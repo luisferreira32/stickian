@@ -1,4 +1,5 @@
 import os
+import json
 
 import psycopg2
 from decouple import config
@@ -7,10 +8,14 @@ from decouple import config
 def load_data():
     with open(os.path.join("world_data", "world.csv"), "r") as f:
         data = f.readlines()
-    return data
+
+    with open(os.path.join("world_data", "world_settleable.json"), "r") as f:
+        settleable = json.load(f)
+
+    return data, settleable
 
 
-def write_to_db(data):
+def write_to_db(data, settleable):
     try:
         conn = psycopg2.connect(
             database=config("DATABASE_NAME"),
@@ -46,8 +51,9 @@ def write_to_db(data):
 
     for q, line in enumerate(data):
         for r, biome in enumerate(line.split(",")[:-1]):
+            is_settleable = "true" if [q, r] in settleable else "false"
             cursor.execute(
-                "INSERT INTO world (q, r, biome) VALUES (%s, %s, %s)", (q, r, biome)
+                "INSERT INTO world (q, r, biome, settleable) VALUES (%s, %s, %s, %s)", (q, r, biome, is_settleable)
             )
     conn.commit()
     print("✅ World map data successfully inserted into database")
@@ -57,8 +63,8 @@ def write_to_db(data):
 
 
 def run():
-    data = load_data()
-    write_to_db(data)
+    data, settleable = load_data()
+    write_to_db(data, settleable)
 
 
 if __name__ == "__main__":

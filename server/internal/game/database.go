@@ -16,7 +16,7 @@ type MapTile struct {
 }
 
 type GameDatabase interface {
-	GetCity(ctx context.Context, id string, userID string) (*City, error)
+	GetCity(ctx context.Context, id string) (*City, error)
 	GetCities(ctx context.Context, q1, r1, q2, r2 int) ([]*City, error)
 	CreateCity(ctx context.Context, c *City) error
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
@@ -37,14 +37,14 @@ const getCityQuery = `SELECT
 	FROM city c
 	LEFT JOIN city_resources cr ON cr.city_id = c.id
 	LEFT JOIN city_buildings cb ON cb.city_id = c.id
-	WHERE c.id = $1 AND c.player_id = $2`
+	WHERE c.id = $1`
 
-func (db *PostgresDatabase) GetCity(ctx context.Context, id string, userID string) (*City, error) {
+func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, error) {
 	city := &City{
 		Resources: &Resources{},
 		Buildings: &Buildings{},
 	}
-	err := db.DB.QueryRow(ctx, getCityQuery, id, userID).Scan(
+	err := db.DB.QueryRow(ctx, getCityQuery, id).Scan(
 		&city.ID,
 		&city.PlayerID,
 		&city.Name,

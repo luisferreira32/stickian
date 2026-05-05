@@ -1,6 +1,7 @@
 import math
+import random
 import os
-import sys
+import sys, json
 from typing import Dict, List, Set, Tuple
 
 import matplotlib.colors as pltc
@@ -78,6 +79,7 @@ class WorldGenerator:
         self.config = config
         self.rng = np.random.default_rng()
         self.grid: Dict[Tuple[int, int], int] = {}
+        self.settleable: List[Tuple[int, int]] = []
 
     def _init_grid(self) -> None:
         """Initialize the grid with ocean tiles.
@@ -220,7 +222,7 @@ class WorldGenerator:
         return sea, coast, plains, mountains
 
     def _classify_island(self, island: Set[Tuple[int, int]]) -> None:
-        """Classify island into biomes.
+        """Classify island into biomes and update settleable tiles.
 
         Args:
             island (Set[Tuple[int, int]]): Set of hexes that make up the island.
@@ -230,14 +232,39 @@ class WorldGenerator:
         """
         sea, coast, plains, mountains = self._get_biomes(island)
 
+        self._get_settleable(coast, plains, mountains)
+
         for tile in sea:
             self.grid[tile] = 1
         for tile in coast:
             self.grid[tile] = 2
+
         for tile in plains:
             self.grid[tile] = 3
         for tile in mountains:
             self.grid[tile] = 4
+
+        
+
+    def _get_settleable(self, coast: Set[Tuple[int, int]], plains: Set[Tuple[int, int]], mountains: Set[Tuple[int, int]]) -> None:
+        """Get settleable tiles.
+
+        Returns:
+            None
+        """
+        settleable = set()
+        c_cities = random.sample(list(coast), k=self.config.c_min)
+        p_cities = random.sample(list(plains), k=self.config.p_min)
+        m_cities = random.sample(list(mountains), k=self.config.m_min)
+
+        for city in c_cities:
+            settleable.add(city)
+        for city in p_cities:
+            settleable.add(city)
+        for city in m_cities:
+            settleable.add(city)
+
+        self.settleable.extend(settleable)
 
     def generate_map(self) -> Dict[Tuple[int, int], int]:
         """Generate the map.
@@ -289,7 +316,18 @@ class WorldGenerator:
         )
         collection.set_array(values)
         ax.add_collection(collection)
-        ax.autoscale_view()
+
+        # add cities placeholders
+        city_patches = []
+        for q, r in self.settleable:
+            x, y = axial_to_cart(q, r)
+            city_patches.append(mpatches.Circle((x, y), radius=hex_r * 0.4))
+
+        if city_patches:
+            city_collection = PatchCollection(
+                city_patches, facecolor="gray", edgecolor="none", zorder=2
+            )
+            ax.add_collection(city_collection)
 
         legend_elements = [
             mpatches.Patch(
@@ -306,6 +344,7 @@ class WorldGenerator:
             labelcolor="white",
             edgecolor="#444",
         )
+        ax.autoscale_view()
 
         ax.set_title("World Map", color="white", fontsize=12, pad=10)
         fig.tight_layout()
@@ -336,9 +375,15 @@ class WorldGenerator:
             lines.append(line)
 
         os.makedirs("./world_data", exist_ok=True)
-        with open(f"./world_data/{self.config.name}.csv", "w") as f:
+
+        with open(os.path.join("world_data", f"{self.config.name}.csv"), "w") as f:
             f.writelines(lines)
+
+        with open(os.path.join("world_data", f"{self.config.name}_settleable.json"), "w") as f:
+            json.dump(self.settleable, f)
+
         print(f"✅ Map successfully saved at ./world_data/{self.config.name}.csv")
+        print(f"✅ Settleable tiles saved at ./world_data/{self.config.name}_settleable.json")
 
 
 def load_configs() -> WorldConfig:

@@ -13,14 +13,14 @@ import (
 )
 
 type mockDatabase struct {
-	GetCityFunc    func(id string, userID string) (*City, error)
+	GetCityFunc    func(id string) (*City, error)
 	GetCitiesFunc  func(q1, r1, q2, r2 int) ([]*City, error)
 	CreateCityFunc func(c *City) error
 	GetMapFunc     func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 }
 
-func (db *mockDatabase) GetCity(_ context.Context, id string, userID string) (*City, error) {
-	return db.GetCityFunc(id, userID)
+func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
+	return db.GetCityFunc(id)
 }
 
 func (db *mockDatabase) GetCities(_ context.Context, q1, r1, q2, r2 int) ([]*City, error) {
@@ -42,7 +42,7 @@ func makeCity(opts ...func(*City)) *City {
 		R:        5,
 		Biome:    "plains",
 		Points:   0,
-		PlayerID: "Test Player",
+		PlayerID: "test-user",
 	}
 	for _, opt := range opts {
 		opt(city)
@@ -94,7 +94,7 @@ func Test_GetCity(t *testing.T) {
 			gotid := ""
 			// given
 			mockDB := &mockDatabase{
-				GetCityFunc: func(id string, userID string) (*City, error) {
+				GetCityFunc: func(id string) (*City, error) {
 					gotid = id
 					return testcase.mockRes, testcase.mockErr
 				},

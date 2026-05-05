@@ -1,17 +1,10 @@
-CREATE TYPE biome_type AS ENUM (
-    'mountain',
-    'plains',
-    'coast'
-);
-
-
 CREATE TABLE IF NOT EXISTS city (
     id          UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     player_id   UUID          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name        VARCHAR(128)  NOT NULL,
     q           INT           NOT NULL,
     r           INT           NOT NULL,
-    biome       biome_type    NOT NULL, 
+    biome       INT           NOT NULL, 
     points      INT           NOT NULL DEFAULT 0,
 
     CONSTRAINT city_unique_coords UNIQUE (q, r)
