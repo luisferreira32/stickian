@@ -1,9 +1,11 @@
 package game
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,11 +15,12 @@ import (
 )
 
 type mockDatabase struct {
-	GetCityFunc         func(id string) (*City, error)
-	GetCitiesFunc       func(q1, r1, q2, r2 int) ([]*City, error)
-	CreateCityFunc      func(c *City) error
-	GetMapFunc          func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
-	GetNextCitySpotFunc func() (*MapTile, error)
+	GetCityFunc            func(id string) (*City, error)
+	GetCitiesFunc          func(q1, r1, q2, r2 int) ([]*City, error)
+	CreateCityFunc         func(c *City) error
+	GetMapFunc             func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
+	GetNextCitySpotFunc    func() (*MapTile, error)
+	GetSettleableTileFunc  func(q, r int) (*MapTile, error)
 }
 
 func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
@@ -38,6 +41,10 @@ func (db *mockDatabase) GetMap(_ context.Context, minQ, maxQ, minR, maxR int) ([
 
 func (db *mockDatabase) GetNextCitySpot(_ context.Context) (*MapTile, error) {
 	return db.GetNextCitySpotFunc()
+}
+
+func (db *mockDatabase) GetSettleableTile(_ context.Context, q, r int) (*MapTile, error) {
+	return db.GetSettleableTileFunc(q, r)
 }
 
 func makeCity(opts ...func(*City)) *City {
@@ -203,6 +210,112 @@ func Test_GetCities(t *testing.T) {
 			}
 			if diff := cmp.Diff(testcase.wantBody, rec.Body.Bytes()); diff != "" {
 				t.Errorf("unexpected body diff (-want, +got): %v", diff)
+			}
+		})
+	}
+}
+
+func Test_FoundCity(t *testing.T) {
+	tile := &MapTile{Q: 3, R: 7, Biome: 2}
+
+	testcases := []struct {
+		name            string
+		body            string
+		tileRes         *MapTile
+		tileErr         error
+		createErr       error
+		wantStatus      int
+		wantBody        []byte
+		wantCityHall    int
+		wantResources   *Resources
+	}{
+		{
+			name:         "success with resources",
+			body:         `{"cityName":"New Town","q":3,"r":7,"food":50,"sticks":30,"stones":20,"gems":5}`,
+			tileRes:      tile,
+			wantStatus:   200,
+			wantCityHall: 1,
+			wantResources: &Resources{Food: 50, Sticks: 30, Stones: 20, Gems: 5},
+		},
+		{
+			name:         "success without resources",
+			body:         `{"cityName":"New Town","q":3,"r":7}`,
+			tileRes:      tile,
+			wantStatus:   200,
+			wantCityHall: 1,
+			wantResources: &Resources{},
+		},
+		{
+			name:       "missing city name",
+			body:       `{"q":3,"r":7}`,
+			wantStatus: 400,
+			wantBody:   []byte("user error: city name is required\n"),
+		},
+		{
+			name:       "negative resources",
+			body:       `{"cityName":"New Town","q":3,"r":7,"food":-1}`,
+			wantStatus: 400,
+			wantBody:   []byte("user error: resources cannot be negative\n"),
+		},
+		{
+			name:       "tile not available",
+			body:       `{"cityName":"New Town","q":3,"r":7}`,
+			tileErr:    errors.New("user error: tile is not available for settlement"),
+			wantStatus: 500,
+			wantBody:   []byte("user error: tile is not available for settlement\n"),
+		},
+		{
+			name:       "database error on create",
+			body:       `{"cityName":"New Town","q":3,"r":7}`,
+			tileRes:    tile,
+			createErr:  errors.New("a database error"),
+			wantStatus: 500,
+			wantBody:   []byte("a database error\n"),
+		},
+	}
+
+	for _, testcase := range testcases {
+		t.Run(testcase.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			var gotCity *City
+			mockDB := &mockDatabase{
+				GetSettleableTileFunc: func(q, r int) (*MapTile, error) {
+					return testcase.tileRes, testcase.tileErr
+				},
+				CreateCityFunc: func(c *City) error {
+					gotCity = c
+					return testcase.createErr
+				},
+			}
+			service := &GameService{Database: mockDB}
+			req := &http.Request{
+				Method: "POST",
+				URL:    &url.URL{Path: "/api/cities"},
+				Body:   http.NoBody,
+			}
+			req.Body = http.NoBody
+			if testcase.body != "" {
+				req.Body = io.NopCloser(bytes.NewBufferString(testcase.body))
+			}
+			req = req.WithContext(context.WithValue(req.Context(), "sub", "test-user"))
+
+			service.FoundCity(rec, req)
+
+			if testcase.wantStatus != rec.Code {
+				t.Errorf("unexpected status code: want %v, got %v", testcase.wantStatus, rec.Code)
+			}
+			if testcase.wantBody != nil {
+				if diff := cmp.Diff(testcase.wantBody, rec.Body.Bytes()); diff != "" {
+					t.Errorf("unexpected body diff (-want, +got): %v", diff)
+				}
+			}
+			if testcase.wantCityHall != 0 && gotCity != nil {
+				if gotCity.Buildings.CityHall != testcase.wantCityHall {
+					t.Errorf("unexpected city hall level: want %v, got %v", testcase.wantCityHall, gotCity.Buildings.CityHall)
+				}
+				if diff := cmp.Diff(testcase.wantResources, gotCity.Resources); diff != "" {
+					t.Errorf("unexpected resources diff (-want, +got): %v", diff)
+				}
 			}
 		})
 	}

@@ -21,6 +21,7 @@ type GameDatabase interface {
 	CreateCity(ctx context.Context, c *City) error
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 	GetNextCitySpot(ctx context.Context) (*MapTile, error)
+	GetSettleableTile(ctx context.Context, q, r int) (*MapTile, error)
 }
 
 type PostgresDatabase struct {
@@ -234,6 +235,28 @@ func (db *PostgresDatabase) GetNextCitySpot(ctx context.Context) (*MapTile, erro
 	err := row.Scan(&t.Q, &t.R, &t.Biome)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, utils.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+const getSettleableTileQuery = `
+SELECT w.q, w.r, w.biome
+FROM world w
+LEFT JOIN city c ON w.q = c.q AND w.r = c.r
+WHERE w.q = $1 AND w.r = $2
+AND w.settleable = true
+AND c.id IS NULL`
+
+// GetSettleableTile returns the tile at (q, r) if it is settleable and has no existing city.
+// Returns ErrUserError if the tile does not exist, is not settleable, or is already occupied.
+func (db *PostgresDatabase) GetSettleableTile(ctx context.Context, q, r int) (*MapTile, error) {
+	var t MapTile
+	err := db.DB.QueryRow(ctx, getSettleableTileQuery, q, r).Scan(&t.Q, &t.R, &t.Biome)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("%w: tile is not available for settlement", utils.ErrUserError)
 	}
 	if err != nil {
 		return nil, err
