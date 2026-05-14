@@ -130,6 +130,73 @@ func (g *GameService) CreateMovement(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetMovement returns a single movement by ID. The authenticated user must own the origin city.
+func (g *GameService) GetMovement(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	userID, ok := r.Context().Value("sub").(string)
+	if !ok || userID == "" {
+		utils.WithError(w, utils.ErrUnauthorized)
+		return
+	}
+
+	m, err := g.Database.GetMovement(r.Context(), id)
+	if err != nil {
+		utils.WithError(w, err)
+		return
+	}
+
+	city, err := g.Database.GetCity(r.Context(), m.CityFrom)
+	if err != nil {
+		utils.WithError(w, err)
+		return
+	}
+	if city.PlayerID != userID {
+		utils.WithError(w, utils.ErrForbidden)
+		return
+	}
+
+	utils.WithDefaultOKHeaders(w)
+	if err := json.NewEncoder(w).Encode(m); err != nil {
+		utils.WithError(w, fmt.Errorf("failed to encode movement: %w", err))
+		return
+	}
+}
+
+// DeleteMovement recalls (cancels) a movement. The authenticated user must own the origin city.
+func (g *GameService) DeleteMovement(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	userID, ok := r.Context().Value("sub").(string)
+	if !ok || userID == "" {
+		utils.WithError(w, utils.ErrUnauthorized)
+		return
+	}
+
+	m, err := g.Database.GetMovement(r.Context(), id)
+	if err != nil {
+		utils.WithError(w, err)
+		return
+	}
+
+	city, err := g.Database.GetCity(r.Context(), m.CityFrom)
+	if err != nil {
+		utils.WithError(w, err)
+		return
+	}
+	if city.PlayerID != userID {
+		utils.WithError(w, utils.ErrForbidden)
+		return
+	}
+
+	if err := g.Database.DeleteMovement(r.Context(), id); err != nil {
+		utils.WithError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // GetMovements returns movements for a city. The authenticated user must own the city.
 // Query params:
 //   - cityId (required): the city to query movements for
