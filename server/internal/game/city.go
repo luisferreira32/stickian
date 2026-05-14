@@ -23,6 +23,7 @@ type City struct {
 	Points    int        `json:"points"`
 	Buildings *Buildings `json:"buildings,omitempty"`
 	Resources *Resources `json:"resources,omitempty"`
+	Troops    *Troops    `json:"troops,omitempty"`
 }
 
 type Buildings struct {
@@ -56,6 +57,14 @@ type Resources struct {
 	Gems       int `json:"gems"`
 	Population int `json:"population"`
 	Faith      int `json:"faith"`
+}
+
+type Troops struct {
+	Swordsmen int `json:"swordsmen"`
+	Archers   int `json:"archers"`
+	Cavalry   int `json:"cavalry"`
+	Ships     int `json:"ships"`
+	Spies     int `json:"spies"`
 }
 
 // GetCity gets the details of a city by its ID.

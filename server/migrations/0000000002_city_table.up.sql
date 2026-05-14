@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS city_buildings (
     city_id         UUID        NOT NULL PRIMARY KEY REFERENCES city(id) ON DELETE CASCADE,
     city_hall       INT         NOT NULL DEFAULT 0,
     embassy         INT         NOT NULL DEFAULT 0,
-    treasury        INT         NOT NULL DEFAULT 0, 
+    treasury        INT         NOT NULL DEFAULT 0,
     tavern          INT         NOT NULL DEFAULT 0,
     farm            INT         NOT NULL DEFAULT 0,
     lumbermill      INT         NOT NULL DEFAULT 0,
@@ -45,4 +45,14 @@ CREATE TABLE IF NOT EXISTS city_buildings (
     temple          INT         NOT NULL DEFAULT 0,
     shrine          INT         NOT NULL DEFAULT 0,
     cathedral       INT         NOT NULL DEFAULT 0
+);
+
+
+CREATE TABLE IF NOT EXISTS city_troops (
+    city_id         UUID        NOT NULL PRIMARY KEY REFERENCES city(id) ON DELETE CASCADE,
+    swordsmen       INT         NOT NULL DEFAULT 0 CHECK (swordsmen >= 0),
+    archers         INT         NOT NULL DEFAULT 0 CHECK (archers >= 0),
+    cavalry         INT         NOT NULL DEFAULT 0 CHECK (cavalry >= 0),
+    ships           INT         NOT NULL DEFAULT 0 CHECK (ships >= 0),
+    spies           INT         NOT NULL DEFAULT 0 CHECK (spies >= 0)
 );

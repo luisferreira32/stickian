@@ -72,6 +72,9 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	mux.HandleFunc("POST /api/signup", chainMiddleware(userSvc.Signup, middlewares...))
 	// map endpoints
 	mux.HandleFunc("GET /api/map", chainMiddleware(gameSvc.GetMapChunk, middlewares...))
+	// movement endpoints
+	mux.HandleFunc("POST /api/movements", chainMiddleware(gameSvc.CreateMovement, middlewares...))
+	mux.HandleFunc("GET /api/movements", chainMiddleware(gameSvc.GetMovements, middlewares...))
 	// game endpoints
 	mux.HandleFunc("POST /api/joinworld", chainMiddleware(gameSvc.JoinWorld, middlewares...))
 

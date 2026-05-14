@@ -15,12 +15,17 @@ import (
 )
 
 type mockDatabase struct {
-	GetCityFunc            func(id string) (*City, error)
-	GetCitiesFunc          func(q1, r1, q2, r2 int) ([]*City, error)
-	CreateCityFunc         func(c *City) error
-	GetMapFunc             func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
-	GetNextCitySpotFunc    func() (*MapTile, error)
-	GetSettleableTileFunc  func(q, r int) (*MapTile, error)
+	GetCityFunc              func(id string) (*City, error)
+	GetCitiesFunc            func(q1, r1, q2, r2 int) ([]*City, error)
+	CreateCityFunc           func(c *City) error
+	GetMapFunc               func(minQ, maxQ, minR, maxR int) ([]*MapTile, error)
+	GetNextCitySpotFunc      func() (*MapTile, error)
+	GetSettleableTileFunc    func(q, r int) (*MapTile, error)
+	CreateMovementFunc       func(m *Movement) error
+	GetMovementFunc          func(id string) (*Movement, error)
+	GetOutgoingMovementsFunc func(cityID string) ([]*Movement, error)
+	GetIncomingMovementsFunc func(cityID string) ([]*Movement, error)
+	DeleteMovementFunc       func(id string) error
 }
 
 func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
@@ -47,6 +52,26 @@ func (db *mockDatabase) GetSettleableTile(_ context.Context, q, r int) (*MapTile
 	return db.GetSettleableTileFunc(q, r)
 }
 
+func (db *mockDatabase) CreateMovement(_ context.Context, m *Movement) error {
+	return db.CreateMovementFunc(m)
+}
+
+func (db *mockDatabase) GetMovement(_ context.Context, id string) (*Movement, error) {
+	return db.GetMovementFunc(id)
+}
+
+func (db *mockDatabase) GetOutgoingMovements(_ context.Context, cityID string) ([]*Movement, error) {
+	return db.GetOutgoingMovementsFunc(cityID)
+}
+
+func (db *mockDatabase) GetIncomingMovements(_ context.Context, cityID string) ([]*Movement, error) {
+	return db.GetIncomingMovementsFunc(cityID)
+}
+
+func (db *mockDatabase) DeleteMovement(_ context.Context, id string) error {
+	return db.DeleteMovementFunc(id)
+}
+
 func makeCity(opts ...func(*City)) *City {
 	city := &City{
 		Name:     "Test City",
@@ -55,6 +80,7 @@ func makeCity(opts ...func(*City)) *City {
 		Biome:    0,
 		Points:   0,
 		PlayerID: "test-user",
+		Troops:   &Troops{},
 	}
 	for _, opt := range opts {
 		opt(city)
@@ -315,6 +341,9 @@ func Test_FoundCity(t *testing.T) {
 				}
 				if diff := cmp.Diff(testcase.wantResources, gotCity.Resources); diff != "" {
 					t.Errorf("unexpected resources diff (-want, +got): %v", diff)
+				}
+				if diff := cmp.Diff(&Troops{}, gotCity.Troops); diff != "" {
+					t.Errorf("unexpected troops diff (-want, +got): %v", diff)
 				}
 			}
 		})

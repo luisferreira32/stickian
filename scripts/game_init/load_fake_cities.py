@@ -3,7 +3,7 @@ from decouple import config
 import uuid
 import random
 
-admin_id = "115a612f-c6bc-42b7-9622-cba5a711a609"
+admin_id = "ba3e2ff9-a950-40a9-8117-b660fb47e8a7"
 
 fake_cities = {
     str(uuid.uuid4()): {
@@ -29,7 +29,7 @@ fake_cities = {
             "gems": 145,
             "population": 45,
             "faith": 18,
-        },
+        }
     },
     str(uuid.uuid4()): {
         "player_id": admin_id,
@@ -103,6 +103,13 @@ fake_cities = {
             "population": 750,
             "faith": 88,
         },
+        "units": {
+            "swordsmen": 200,
+            "archers": 200,
+            "cavalry": 100,
+            "ships": 20,
+            "spies": 5,
+        },
     },
     str(uuid.uuid4()): {
         "player_id": admin_id,
@@ -127,6 +134,13 @@ fake_cities = {
             "population": 300,
             "faith": 12,
         },
+        "units": {
+            "swordsmen": 100,
+            "archers": 100,
+            "cavalry": 10,
+            "ships": 0,
+            "spies": 0,
+        },
     },
 }
 
@@ -143,39 +157,51 @@ def serialize_data(city, keyword, city_id):
             city["points"],
         )
     elif keyword == "city_resources":
+        res = city.get("resources", {})
         return (
             city_id,
-            city["resources"]["food"] if "food" in city["resources"] else 0,
-            city["resources"]["sticks"] if "sticks" in city["resources"] else 0,
-            city["resources"]["stones"] if "stones" in city["resources"] else 0,
-            city["resources"]["gems"] if "gems" in city["resources"] else 0,
-            city["resources"]["population"] if "population" in city["resources"] else 0,
-            city["resources"]["faith"] if "faith" in city["resources"] else 0,
+            res.get("food", 0),
+            res.get("sticks", 0),
+            res.get("stones", 0),
+            res.get("gems", 0),
+            res.get("population", 0),
+            res.get("faith", 0),
         )
     elif keyword == "city_buildings":
+        bld = city.get("buildings", {})
         return (
             city_id,
-            city["buildings"]["city_hall"] if "city_hall" in city["buildings"] else 0,
-            city["buildings"]["embassy"] if "embassy" in city["buildings"] else 0,
-            city["buildings"]["treasury"] if "treasury" in city["buildings"] else 0,
-            city["buildings"]["tavern"] if "tavern" in city["buildings"] else 0,
-            city["buildings"]["farm"] if "farm" in city["buildings"] else 0,
-            city["buildings"]["lumbermill"] if "lumbermill" in city["buildings"] else 0,
-            city["buildings"]["quarry"] if "quarry" in city["buildings"] else 0,
-            city["buildings"]["crystal_mine"] if "crystal_mine" in city["buildings"] else 0,
-            city["buildings"]["warehouse"] if "warehouse" in city["buildings"] else 0,
-            city["buildings"]["market"] if "market" in city["buildings"] else 0,
-            city["buildings"]["harbor"] if "harbor" in city["buildings"] else 0,
-            city["buildings"]["walls"] if "walls" in city["buildings"] else 0,
-            city["buildings"]["barracks"] if "barracks" in city["buildings"] else 0,
-            city["buildings"]["docks"] if "docks" in city["buildings"] else 0,
-            city["buildings"]["spy_guild"] if "spy_guild" in city["buildings"] else 0,
-            city["buildings"]["library"] if "library" in city["buildings"] else 0,
-            city["buildings"]["workshop"] if "workshop" in city["buildings"] else 0,
-            city["buildings"]["observatory"] if "observatory" in city["buildings"] else 0,
-            city["buildings"]["temple"] if "temple" in city["buildings"] else 0,
-            city["buildings"]["shrine"] if "shrine" in city["buildings"] else 0,
-            city["buildings"]["cathedral"] if "cathedral" in city["buildings"] else 0,
+            bld.get("city_hall", 0),
+            bld.get("embassy", 0),
+            bld.get("treasury", 0),
+            bld.get("tavern", 0),
+            bld.get("farm", 0),
+            bld.get("lumbermill", 0),
+            bld.get("quarry", 0),
+            bld.get("crystal_mine", 0),
+            bld.get("warehouse", 0),
+            bld.get("market", 0),
+            bld.get("harbor", 0),
+            bld.get("walls", 0),
+            bld.get("barracks", 0),
+            bld.get("docks", 0),
+            bld.get("spy_guild", 0),
+            bld.get("library", 0),
+            bld.get("workshop", 0),
+            bld.get("observatory", 0),
+            bld.get("temple", 0),
+            bld.get("shrine", 0),
+            bld.get("cathedral", 0),
+        )
+    elif keyword == "city_troops":
+        units = city.get("units", {})
+        return (
+            city_id,
+            units.get("swordsmen", 0),
+            units.get("archers", 0),
+            units.get("cavalry", 0),
+            units.get("ships", 0),
+            units.get("spies", 0),
         )
 
 
@@ -197,6 +223,13 @@ def insert_city_buildings(cursor, city, city_id):
     cursor.execute(
         "INSERT INTO city_buildings (city_id, city_hall, embassy, treasury, tavern, farm, lumbermill, quarry, crystal_mine, warehouse, market, harbor, walls, barracks, docks, spy_guild, library, workshop, observatory, temple, shrine, cathedral) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
         serialize_data(city, "city_buildings", city_id),
+    )
+
+
+def insert_city_troops(cursor, city, city_id):
+    cursor.execute(
+        "INSERT INTO city_troops (city_id, swordsmen, archers, cavalry, ships, spies) VALUES (%s, %s, %s, %s, %s, %s)",
+        serialize_data(city, "city_troops", city_id),
     )
 
 
@@ -244,6 +277,7 @@ def write_to_db(data):
         insert_city(cursor, city, city_id)
         insert_city_resources(cursor, city, city_id)
         insert_city_buildings(cursor, city, city_id)
+        insert_city_troops(cursor, city, city_id)
     conn.commit()
     print("✅ Cities data successfully inserted into databases")
 
