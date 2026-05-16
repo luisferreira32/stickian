@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS movement (
     id              UUID            NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
     city_from       UUID            NOT NULL REFERENCES city(id) ON DELETE CASCADE,
-    city_to         UUID            NOT NULL REFERENCES city(id) ON DELETE CASCADE,
+    city_to         UUID            NOT NULL REFERENCES city(id),
     type            INT             NOT NULL,
     arrival_time    TIMESTAMPTZ     NOT NULL,
 
