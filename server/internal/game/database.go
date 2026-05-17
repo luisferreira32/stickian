@@ -22,6 +22,11 @@ type GameDatabase interface {
 	GetMap(ctx context.Context, minQ, maxQ, minR, maxR int) ([]*MapTile, error)
 	GetNextCitySpot(ctx context.Context) (*MapTile, error)
 	GetSettleableTile(ctx context.Context, q, r int) (*MapTile, error)
+	CreateMovement(ctx context.Context, m *Movement) error
+	GetMovement(ctx context.Context, id string) (*Movement, error)
+	GetOutgoingMovements(ctx context.Context, cityID string) ([]*Movement, error)
+	GetIncomingMovements(ctx context.Context, cityID string) ([]*Movement, error)
+	DeleteMovement(ctx context.Context, id string) error
 }
 
 type PostgresDatabase struct {
@@ -35,16 +40,19 @@ const getCityQuery = `SELECT
 	cb.farm, cb.lumbermill, cb.quarry, cb.crystal_mine,
 	cb.warehouse, cb.market, cb.harbor, cb.walls,
 	cb.barracks, cb.docks, cb.spy_guild, cb.library,
-	cb.workshop, cb.observatory, cb.temple, cb.shrine, cb.cathedral
+	cb.workshop, cb.observatory, cb.temple, cb.shrine, cb.cathedral,
+	ct.swordsmen, ct.archers, ct.cavalry, ct.ships, ct.spies
 	FROM city c
 	LEFT JOIN city_resources cr ON cr.city_id = c.id
 	LEFT JOIN city_buildings cb ON cb.city_id = c.id
+	LEFT JOIN city_troops ct ON ct.city_id = c.id
 	WHERE c.id = $1`
 
 func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, error) {
 	city := &City{
 		Resources: &Resources{},
 		Buildings: &Buildings{},
+		Troops:    &Troops{},
 	}
 	err := db.DB.QueryRow(ctx, getCityQuery, id).Scan(
 		&city.ID,
@@ -81,6 +89,11 @@ func (db *PostgresDatabase) GetCity(ctx context.Context, id string) (*City, erro
 		&city.Buildings.Temple,
 		&city.Buildings.Shrine,
 		&city.Buildings.Cathedral,
+		&city.Troops.Swordsmen,
+		&city.Troops.Archers,
+		&city.Troops.Cavalry,
+		&city.Troops.Ships,
+		&city.Troops.Spies,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, utils.ErrNotFound
@@ -137,6 +150,10 @@ const createCityBuildingsQuery = `INSERT INTO city_buildings (city_id, city_hall
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
 	ON CONFLICT DO NOTHING`
 
+const createCityTroopsQuery = `INSERT INTO city_troops (city_id, swordsmen, archers, cavalry, ships, spies)
+	VALUES ($1, $2, $3, $4, $5, $6)
+	ON CONFLICT DO NOTHING`
+
 func (db *PostgresDatabase) CreateCity(ctx context.Context, c *City) error {
 	_, err := db.DB.Exec(ctx, createCityQuery,
 		c.ID,
@@ -188,6 +205,17 @@ func (db *PostgresDatabase) CreateCity(ctx context.Context, c *City) error {
 	)
 	if err != nil {
 		return fmt.Errorf("city buildings: %w", err)
+	}
+	_, err = db.DB.Exec(ctx, createCityTroopsQuery,
+		c.ID,
+		c.Troops.Swordsmen,
+		c.Troops.Archers,
+		c.Troops.Cavalry,
+		c.Troops.Ships,
+		c.Troops.Spies,
+	)
+	if err != nil {
+		return fmt.Errorf("city troops: %w", err)
 	}
 
 	return nil
@@ -262,4 +290,107 @@ func (db *PostgresDatabase) GetSettleableTile(ctx context.Context, q, r int) (*M
 		return nil, err
 	}
 	return &t, nil
+}
+
+const createMovementQuery = `INSERT INTO movement
+	(id, city_from, city_to, type, arrival_time,
+	 swordsmen, archers, cavalry, ships, spies,
+	 food, sticks, stones, gems)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
+
+func (db *PostgresDatabase) CreateMovement(ctx context.Context, m *Movement) error {
+	_, err := db.DB.Exec(ctx, createMovementQuery,
+		m.ID,
+		m.CityFrom,
+		m.CityTo,
+		m.Type,
+		m.ArrivalTime,
+		m.Troops.Swordsmen,
+		m.Troops.Archers,
+		m.Troops.Cavalry,
+		m.Troops.Ships,
+		m.Troops.Spies,
+		m.Resources.Food,
+		m.Resources.Sticks,
+		m.Resources.Stones,
+		m.Resources.Gems,
+	)
+	if err != nil {
+		return fmt.Errorf("create movement: %w", err)
+	}
+	return nil
+}
+
+const getMovementQuery = `SELECT
+	id, city_from, city_to, type, arrival_time,
+	swordsmen, archers, cavalry, ships, spies,
+	food, sticks, stones, gems
+	FROM movement WHERE id = $1`
+
+func (db *PostgresDatabase) GetMovement(ctx context.Context, id string) (*Movement, error) {
+	m := &Movement{Troops: &Troops{}, Resources: &MaterialResources{}}
+	err := db.DB.QueryRow(ctx, getMovementQuery, id).Scan(
+		&m.ID, &m.CityFrom, &m.CityTo, &m.Type, &m.ArrivalTime,
+		&m.Troops.Swordsmen, &m.Troops.Archers, &m.Troops.Cavalry, &m.Troops.Ships, &m.Troops.Spies,
+		&m.Resources.Food, &m.Resources.Sticks, &m.Resources.Stones, &m.Resources.Gems,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, utils.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+const getOutgoingMovementsQuery = `SELECT
+	id, city_from, city_to, type, arrival_time,
+	swordsmen, archers, cavalry, ships, spies,
+	food, sticks, stones, gems
+	FROM movement WHERE city_from = $1 ORDER BY arrival_time`
+
+func (db *PostgresDatabase) GetOutgoingMovements(ctx context.Context, cityID string) ([]*Movement, error) {
+	return db.scanMovements(ctx, getOutgoingMovementsQuery, cityID)
+}
+
+const getIncomingMovementsQuery = `SELECT
+	id, city_from, city_to, type, arrival_time,
+	swordsmen, archers, cavalry, ships, spies,
+	food, sticks, stones, gems
+	FROM movement WHERE city_to = $1 ORDER BY arrival_time`
+
+func (db *PostgresDatabase) GetIncomingMovements(ctx context.Context, cityID string) ([]*Movement, error) {
+	return db.scanMovements(ctx, getIncomingMovementsQuery, cityID)
+}
+
+const deleteMovementQuery = `DELETE FROM movement WHERE id = $1`
+
+func (db *PostgresDatabase) DeleteMovement(ctx context.Context, id string) error {
+	_, err := db.DB.Exec(ctx, deleteMovementQuery, id)
+	if err != nil {
+		return fmt.Errorf("delete movement: %w", err)
+	}
+	return nil
+}
+
+func (db *PostgresDatabase) scanMovements(ctx context.Context, query, cityID string) ([]*Movement, error) {
+	rows, err := db.DB.Query(ctx, query, cityID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var movements []*Movement
+	for rows.Next() {
+		m := &Movement{Troops: &Troops{}, Resources: &MaterialResources{}}
+		if err := rows.Scan(
+			&m.ID, &m.CityFrom, &m.CityTo, &m.Type, &m.ArrivalTime,
+			&m.Troops.Swordsmen, &m.Troops.Archers, &m.Troops.Cavalry, &m.Troops.Ships, &m.Troops.Spies,
+			&m.Resources.Food, &m.Resources.Sticks, &m.Resources.Stones, &m.Resources.Gems,
+		); err != nil {
+			return nil, err
+		}
+		movements = append(movements, m)
+	}
+	return movements, nil
 }

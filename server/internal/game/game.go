@@ -98,6 +98,7 @@ func (g *GameService) JoinWorld(w http.ResponseWriter, r *http.Request) {
 		Points:    0,
 		Buildings: &Buildings{},
 		Resources: InitialResources,
+		Troops:    &Troops{},
 	}
 
 	// HACK: to avoid collisions we can have a shared lock on our monolith server!
@@ -220,6 +221,7 @@ func (g *GameService) FoundCity(w http.ResponseWriter, r *http.Request) {
 			Stones: req.Stones,
 			Gems:   req.Gems,
 		},
+		Troops: &Troops{},
 	}
 
 	if err := g.Database.CreateCity(r.Context(), newCity); err != nil {
