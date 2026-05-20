@@ -25,13 +25,15 @@ type MaterialResources struct {
 }
 
 type Movement struct {
-	ID          string             `json:"id"`
-	CityFrom    string             `json:"cityFrom"`
-	CityTo      string             `json:"cityTo"`
-	Type        int                `json:"type"`
-	ArrivalTime time.Time          `json:"arrivalTime"`
-	Troops      *Troops            `json:"troops,omitempty"`
-	Resources   *MaterialResources `json:"resources,omitempty"`
+	ID            string             `json:"id"`
+	CityFrom      string             `json:"cityFrom"`
+	CityTo        string             `json:"cityTo"`
+	Type          int                `json:"type"`
+	DepartureTime time.Time          `json:"departureTime"`
+	ArrivalTime   time.Time          `json:"arrivalTime"`
+	IsReturning   bool               `json:"isReturning"`
+	Troops        *Troops            `json:"troops,omitempty"`
+	Resources     *MaterialResources `json:"resources,omitempty"`
 }
 
 type CreateMovementRequest struct {
@@ -109,13 +111,15 @@ func (g *GameService) CreateMovement(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m := &Movement{
-		ID:          newCityID(),
-		CityFrom:    req.CityFrom,
-		CityTo:      req.CityTo,
-		Type:        req.Type,
-		ArrivalTime: req.ArrivalTime,
-		Troops:      troops,
-		Resources:   resources,
+		ID:            newCityID(),
+		CityFrom:      req.CityFrom,
+		CityTo:        req.CityTo,
+		Type:          req.Type,
+		DepartureTime: time.Now(),
+		ArrivalTime:   req.ArrivalTime,
+		IsReturning:   false,
+		Troops:        troops,
+		Resources:     resources,
 	}
 
 	if err := g.Database.CreateMovement(r.Context(), m); err != nil {
@@ -163,8 +167,20 @@ func (g *GameService) GetMovement(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// DeleteMovement recalls (cancels) a movement. The authenticated user must own the origin city.
-func (g *GameService) DeleteMovement(w http.ResponseWriter, r *http.Request) {
+// CancelCutoffProgress is the fraction of the trip after which cancellation is
+// no longer allowed. A value of 0.90 means the first 90% of the trip is
+// cancellable; the final 10% commits the movement.
+const CancelCutoffProgress = 0.90
+
+// CancelMovement turns an outbound movement into a return trip.
+// The authenticated user must own the origin city. The movement must still be
+// outbound, before its arrival time, and within the cancel window — otherwise
+// the request is rejected as a user error.
+//
+// On success the response contains the updated movement: is_returning = true,
+// departure_time = now, arrival_time = now + elapsed (so the return takes as
+// long as the outbound had been travelling). Origin (city_from) is preserved.
+func (g *GameService) CancelMovement(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 
 	userID, ok := r.Context().Value("sub").(string)
@@ -189,12 +205,17 @@ func (g *GameService) DeleteMovement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := g.Database.DeleteMovement(r.Context(), id); err != nil {
+	updated, err := g.Database.CancelMovement(r.Context(), id, CancelCutoffProgress)
+	if err != nil {
 		utils.WithError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	utils.WithDefaultOKHeaders(w)
+	if err := json.NewEncoder(w).Encode(updated); err != nil {
+		utils.WithError(w, fmt.Errorf("failed to encode movement: %w", err))
+		return
+	}
 }
 
 // GetMovements returns movements for a city. The authenticated user must own the city.

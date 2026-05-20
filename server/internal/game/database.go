@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/luisferreira32/stickian/server/internal/utils"
@@ -26,7 +27,10 @@ type GameDatabase interface {
 	GetMovement(ctx context.Context, id string) (*Movement, error)
 	GetOutgoingMovements(ctx context.Context, cityID string) ([]*Movement, error)
 	GetIncomingMovements(ctx context.Context, cityID string) ([]*Movement, error)
-	DeleteMovement(ctx context.Context, id string) error
+	GetDueMovements(ctx context.Context, now time.Time) ([]*Movement, error)
+	CompleteArrival(ctx context.Context, m *Movement) error
+	CompleteReturn(ctx context.Context, m *Movement) error
+	CancelMovement(ctx context.Context, id string, cutoff float64) (*Movement, error)
 }
 
 type PostgresDatabase struct {
@@ -293,10 +297,10 @@ func (db *PostgresDatabase) GetSettleableTile(ctx context.Context, q, r int) (*M
 }
 
 const createMovementQuery = `INSERT INTO movement
-	(id, city_from, city_to, type, arrival_time,
+	(id, city_from, city_to, type, departure_time, arrival_time, is_returning,
 	 swordsmen, archers, cavalry, ships, spies,
 	 food, sticks, stones, gems)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`
 
 func (db *PostgresDatabase) CreateMovement(ctx context.Context, m *Movement) error {
 	_, err := db.DB.Exec(ctx, createMovementQuery,
@@ -304,7 +308,9 @@ func (db *PostgresDatabase) CreateMovement(ctx context.Context, m *Movement) err
 		m.CityFrom,
 		m.CityTo,
 		m.Type,
+		m.DepartureTime,
 		m.ArrivalTime,
+		m.IsReturning,
 		m.Troops.Swordsmen,
 		m.Troops.Archers,
 		m.Troops.Cavalry,
@@ -321,19 +327,27 @@ func (db *PostgresDatabase) CreateMovement(ctx context.Context, m *Movement) err
 	return nil
 }
 
-const getMovementQuery = `SELECT
-	id, city_from, city_to, type, arrival_time,
+const movementColumns = `id, city_from, city_to, type, departure_time, arrival_time, is_returning,
 	swordsmen, archers, cavalry, ships, spies,
-	food, sticks, stones, gems
-	FROM movement WHERE id = $1`
+	food, sticks, stones, gems`
 
-func (db *PostgresDatabase) GetMovement(ctx context.Context, id string) (*Movement, error) {
+const getMovementQuery = `SELECT ` + movementColumns + ` FROM movement WHERE id = $1`
+
+func scanMovementRow(row pgx.Row) (*Movement, error) {
 	m := &Movement{Troops: &Troops{}, Resources: &MaterialResources{}}
-	err := db.DB.QueryRow(ctx, getMovementQuery, id).Scan(
-		&m.ID, &m.CityFrom, &m.CityTo, &m.Type, &m.ArrivalTime,
+	err := row.Scan(
+		&m.ID, &m.CityFrom, &m.CityTo, &m.Type, &m.DepartureTime, &m.ArrivalTime, &m.IsReturning,
 		&m.Troops.Swordsmen, &m.Troops.Archers, &m.Troops.Cavalry, &m.Troops.Ships, &m.Troops.Spies,
 		&m.Resources.Food, &m.Resources.Sticks, &m.Resources.Stones, &m.Resources.Gems,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (db *PostgresDatabase) GetMovement(ctx context.Context, id string) (*Movement, error) {
+	m, err := scanMovementRow(db.DB.QueryRow(ctx, getMovementQuery, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, utils.ErrNotFound
 	}
@@ -343,34 +357,127 @@ func (db *PostgresDatabase) GetMovement(ctx context.Context, id string) (*Moveme
 	return m, nil
 }
 
-const getOutgoingMovementsQuery = `SELECT
-	id, city_from, city_to, type, arrival_time,
-	swordsmen, archers, cavalry, ships, spies,
-	food, sticks, stones, gems
-	FROM movement WHERE city_from = $1 ORDER BY arrival_time`
+const getOutgoingMovementsQuery = `SELECT ` + movementColumns +
+	` FROM movement WHERE city_from = $1 ORDER BY arrival_time`
 
 func (db *PostgresDatabase) GetOutgoingMovements(ctx context.Context, cityID string) ([]*Movement, error) {
 	return db.scanMovements(ctx, getOutgoingMovementsQuery, cityID)
 }
 
-const getIncomingMovementsQuery = `SELECT
-	id, city_from, city_to, type, arrival_time,
-	swordsmen, archers, cavalry, ships, spies,
-	food, sticks, stones, gems
-	FROM movement WHERE city_to = $1 ORDER BY arrival_time`
+const getIncomingMovementsQuery = `SELECT ` + movementColumns +
+	` FROM movement WHERE city_to = $1 ORDER BY arrival_time`
 
 func (db *PostgresDatabase) GetIncomingMovements(ctx context.Context, cityID string) ([]*Movement, error) {
 	return db.scanMovements(ctx, getIncomingMovementsQuery, cityID)
 }
 
-const deleteMovementQuery = `DELETE FROM movement WHERE id = $1`
+const getDueMovementsQuery = `SELECT ` + movementColumns +
+	` FROM movement WHERE arrival_time <= $1 ORDER BY arrival_time LIMIT 100`
 
-func (db *PostgresDatabase) DeleteMovement(ctx context.Context, id string) error {
-	_, err := db.DB.Exec(ctx, deleteMovementQuery, id)
+// GetDueMovements returns movements whose arrival_time has passed.
+// The ticker picks these up and dispatches them based on is_returning.
+func (db *PostgresDatabase) GetDueMovements(ctx context.Context, now time.Time) ([]*Movement, error) {
+	rows, err := db.DB.Query(ctx, getDueMovementsQuery, now)
 	if err != nil {
-		return fmt.Errorf("delete movement: %w", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var movements []*Movement
+	for rows.Next() {
+		m, err := scanMovementRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		movements = append(movements, m)
+	}
+	return movements, nil
+}
+
+const deleteMovementByIDQuery = `DELETE FROM movement WHERE id = $1 AND arrival_time <= $2`
+
+// CompleteArrival finalises an outbound movement that reached its destination.
+// Effects at the destination are TODO; for now the row is just deleted.
+// The arrival_time check guards against processing a row that was cancelled between
+// discovery and execution.
+func (db *PostgresDatabase) CompleteArrival(ctx context.Context, m *Movement) error {
+	_, err := db.DB.Exec(ctx, deleteMovementByIDQuery, m.ID, time.Now())
+	if err != nil {
+		return fmt.Errorf("complete arrival: %w", err)
 	}
 	return nil
+}
+
+const refundTroopsQuery = `UPDATE city_troops SET
+	swordsmen = swordsmen + $2,
+	archers   = archers   + $3,
+	cavalry   = cavalry   + $4,
+	ships     = ships     + $5,
+	spies     = spies     + $6
+	WHERE city_id = $1`
+
+const refundResourcesQuery = `UPDATE city_resources SET
+	food   = food   + $2,
+	sticks = sticks + $3,
+	stones = stones + $4,
+	gems   = gems   + $5
+	WHERE city_id = $1`
+
+// CompleteReturn finalises a returning movement: troops and resources are added
+// back to the origin city (city_from), then the movement row is deleted.
+// All three operations run in a single transaction so a partial failure cannot
+// leak units or resources.
+func (db *PostgresDatabase) CompleteReturn(ctx context.Context, m *Movement) error {
+	tx, err := db.DB.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin return tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if _, err := tx.Exec(ctx, refundTroopsQuery, m.CityFrom,
+		m.Troops.Swordsmen, m.Troops.Archers, m.Troops.Cavalry, m.Troops.Ships, m.Troops.Spies,
+	); err != nil {
+		return fmt.Errorf("refund troops: %w", err)
+	}
+	if _, err := tx.Exec(ctx, refundResourcesQuery, m.CityFrom,
+		m.Resources.Food, m.Resources.Sticks, m.Resources.Stones, m.Resources.Gems,
+	); err != nil {
+		return fmt.Errorf("refund resources: %w", err)
+	}
+	if _, err := tx.Exec(ctx, deleteMovementByIDQuery, m.ID, time.Now()); err != nil {
+		return fmt.Errorf("delete returning movement: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit return tx: %w", err)
+	}
+	return nil
+}
+
+const cancelMovementQuery = `UPDATE movement
+	SET is_returning   = TRUE,
+	    departure_time = NOW(),
+	    arrival_time   = NOW() + (NOW() - departure_time)
+	WHERE id = $1
+	  AND is_returning = FALSE
+	  AND arrival_time > NOW()
+	  AND EXTRACT(EPOCH FROM (NOW() - departure_time))
+	      < $2 * EXTRACT(EPOCH FROM (arrival_time - departure_time))
+	RETURNING ` + movementColumns
+
+// CancelMovement flips an outbound movement into a return trip if it is still
+// cancellable (not already returning, not past arrival, progress < cutoff).
+// Returns the updated movement on success, or utils.ErrUserError if the movement
+// is no longer cancellable.
+func (db *PostgresDatabase) CancelMovement(ctx context.Context, id string, cutoff float64) (*Movement, error) {
+	m, err := scanMovementRow(db.DB.QueryRow(ctx, cancelMovementQuery, id, cutoff))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("%w: movement is no longer cancellable", utils.ErrUserError)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("cancel movement: %w", err)
+	}
+	return m, nil
 }
 
 func (db *PostgresDatabase) scanMovements(ctx context.Context, query, cityID string) ([]*Movement, error) {
@@ -382,12 +489,8 @@ func (db *PostgresDatabase) scanMovements(ctx context.Context, query, cityID str
 
 	var movements []*Movement
 	for rows.Next() {
-		m := &Movement{Troops: &Troops{}, Resources: &MaterialResources{}}
-		if err := rows.Scan(
-			&m.ID, &m.CityFrom, &m.CityTo, &m.Type, &m.ArrivalTime,
-			&m.Troops.Swordsmen, &m.Troops.Archers, &m.Troops.Cavalry, &m.Troops.Ships, &m.Troops.Spies,
-			&m.Resources.Food, &m.Resources.Sticks, &m.Resources.Stones, &m.Resources.Gems,
-		); err != nil {
+		m, err := scanMovementRow(rows)
+		if err != nil {
 			return nil, err
 		}
 		movements = append(movements, m)

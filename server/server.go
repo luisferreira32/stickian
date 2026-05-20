@@ -40,7 +40,8 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 
 	mux := http.NewServeMux()
 	var gameDB game.GameDatabase = &game.PostgresDatabase{DB: db}
-	gameSvc := &game.GameService{Database: gameDB}
+	gameSvc := &game.GameService{Database: gameDB, TickDuration: time.Second}
+	go gameSvc.Run(ctx)
 	userSvc := &user.UserService{
 		SecretKey:   secretKey,
 		Database:    &user.PostgresDatabase{DB: db},
@@ -77,7 +78,7 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	mux.HandleFunc("POST /api/movements", chainMiddleware(gameSvc.CreateMovement, middlewares...))
 	mux.HandleFunc("GET /api/movements", chainMiddleware(gameSvc.GetMovements, middlewares...))
 	mux.HandleFunc("GET /api/movements/{id}", chainMiddleware(gameSvc.GetMovement, middlewares...))
-	mux.HandleFunc("DELETE /api/movements/{id}", chainMiddleware(gameSvc.DeleteMovement, middlewares...))
+	mux.HandleFunc("DELETE /api/movements/{id}", chainMiddleware(gameSvc.CancelMovement, middlewares...))
 	// game endpoints
 	mux.HandleFunc("POST /api/joinworld", chainMiddleware(gameSvc.JoinWorld, middlewares...))
 

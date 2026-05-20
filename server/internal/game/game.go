@@ -1,11 +1,14 @@
 package game
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/luisferreira32/stickian/server/internal/utils"
 )
@@ -36,9 +39,56 @@ var (
 )
 
 type GameService struct {
-	Database GameDatabase
+	Database     GameDatabase
+	TickDuration time.Duration
 
 	settleLock sync.Mutex
+}
+
+// Run drives the movement queue. Every TickDuration it asks the database for
+// movements whose arrival_time has passed and dispatches each to the right
+// completion: outbound movements run arrival effects (TBD) and returning
+// movements refund troops and resources to the origin city. Errors processing
+// one movement do not block the rest; the row stays in the table and the next
+// tick will retry it.
+func (g *GameService) Run(ctx context.Context) {
+	if g.TickDuration <= 0 {
+		g.TickDuration = time.Second
+	}
+	ticker := time.NewTicker(g.TickDuration)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := g.tick(ctx); err != nil {
+				log.Printf("game tick err: %v", err)
+			}
+		}
+	}
+}
+
+func (g *GameService) tick(ctx context.Context) error {
+	due, err := g.Database.GetDueMovements(ctx, time.Now())
+	if err != nil {
+		return fmt.Errorf("get due movements: %w", err)
+	}
+
+	for _, m := range due {
+		var err error
+		if m.IsReturning {
+			err = g.Database.CompleteReturn(ctx, m)
+		} else {
+			err = g.Database.CompleteArrival(ctx, m)
+		}
+		if err != nil {
+			log.Printf("process movement %s (returning=%v): %v", m.ID, m.IsReturning, err)
+			continue
+		}
+	}
+	return nil
 }
 
 type JoinWorldRequest struct {

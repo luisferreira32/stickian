@@ -3,7 +3,9 @@ CREATE TABLE IF NOT EXISTS movement (
     city_from       UUID            NOT NULL REFERENCES city(id) ON DELETE CASCADE,
     city_to         UUID            NOT NULL REFERENCES city(id),
     type            INT             NOT NULL,
+    departure_time  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     arrival_time    TIMESTAMPTZ     NOT NULL,
+    is_returning    BOOLEAN         NOT NULL DEFAULT FALSE,
 
     -- troops
     swordsmen       INT             NOT NULL DEFAULT 0 CHECK (swordsmen >= 0),
@@ -23,3 +25,4 @@ CREATE TABLE IF NOT EXISTS movement (
 
 CREATE INDEX IF NOT EXISTS movement_city_from_idx ON movement (city_from);
 CREATE INDEX IF NOT EXISTS movement_city_to_idx ON movement (city_to);
+CREATE INDEX IF NOT EXISTS movement_arrival_time_idx ON movement (arrival_time);

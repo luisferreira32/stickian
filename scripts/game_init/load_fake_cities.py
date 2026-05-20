@@ -3,7 +3,7 @@ from decouple import config
 import uuid
 import random
 
-admin_id = "ba3e2ff9-a950-40a9-8117-b660fb47e8a7"
+admin_id = "3c6ee013-6db7-458e-865e-5c1ba8375688"
 
 fake_cities = {
     str(uuid.uuid4()): {

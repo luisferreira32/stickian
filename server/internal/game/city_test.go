@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -25,7 +26,10 @@ type mockDatabase struct {
 	GetMovementFunc          func(id string) (*Movement, error)
 	GetOutgoingMovementsFunc func(cityID string) ([]*Movement, error)
 	GetIncomingMovementsFunc func(cityID string) ([]*Movement, error)
-	DeleteMovementFunc       func(id string) error
+	GetDueMovementsFunc      func(now time.Time) ([]*Movement, error)
+	CompleteArrivalFunc      func(m *Movement) error
+	CompleteReturnFunc       func(m *Movement) error
+	CancelMovementFunc       func(id string, cutoff float64) (*Movement, error)
 }
 
 func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
@@ -68,8 +72,20 @@ func (db *mockDatabase) GetIncomingMovements(_ context.Context, cityID string) (
 	return db.GetIncomingMovementsFunc(cityID)
 }
 
-func (db *mockDatabase) DeleteMovement(_ context.Context, id string) error {
-	return db.DeleteMovementFunc(id)
+func (db *mockDatabase) GetDueMovements(_ context.Context, now time.Time) ([]*Movement, error) {
+	return db.GetDueMovementsFunc(now)
+}
+
+func (db *mockDatabase) CompleteArrival(_ context.Context, m *Movement) error {
+	return db.CompleteArrivalFunc(m)
+}
+
+func (db *mockDatabase) CompleteReturn(_ context.Context, m *Movement) error {
+	return db.CompleteReturnFunc(m)
+}
+
+func (db *mockDatabase) CancelMovement(_ context.Context, id string, cutoff float64) (*Movement, error) {
+	return db.CancelMovementFunc(id, cutoff)
 }
 
 func makeCity(opts ...func(*City)) *City {
