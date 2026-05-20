@@ -1,7 +1,10 @@
 package utils
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -38,4 +41,24 @@ func WithError(w http.ResponseWriter, err error) {
 		// can avoid exposing internal issues but be able to diagnose it
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func LoadBase64QueryParam[T any](r *http.Request) (T, error) {
+	var result T
+
+	v := r.URL.Query().Get("data")
+	if v == "" {
+		return result, fmt.Errorf("missing query parameter data")
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(v)
+	if err != nil {
+		return result, fmt.Errorf("%w: invalid base64 data: %w", ErrUserError, err)
+	}
+
+	if err := json.Unmarshal(decoded, &result); err != nil {
+		return result, fmt.Errorf("%w: invalid JSON data: %w", ErrUserError, err)
+	}
+
+	return result, nil
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/luisferreira32/stickian/server/internal/utils"
 )
@@ -95,40 +94,24 @@ func (g *GameService) GetCity(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type GetCitiesRequest struct {
+	Q1 int `json:"q1"`
+	R1 int `json:"r1"`
+	Q2 int `json:"q2"`
+	R2 int `json:"r2"`
+}
+
 // GetCities returns the city table rows for all cities whose coordinates lie
 // within the bounding box defined by vertices (q1, r1) and (q2, r2).
 // Buildings and Resources are not included in the response.
 func (g *GameService) GetCities(w http.ResponseWriter, r *http.Request) {
-	parseIntParam := func(name string) (int, error) {
-		v := r.URL.Query().Get(name)
-		if v == "" {
-			return 0, fmt.Errorf("missing required parameter: %s", name)
-		}
-		return strconv.Atoi(v)
-	}
-
-	q1, err := parseIntParam("q1")
+	req, err := utils.LoadBase64QueryParam[GetCitiesRequest](r)
 	if err != nil {
-		utils.WithError(w, fmt.Errorf("%w: invalid q1 parameter: %w", utils.ErrUserError, err))
-		return
-	}
-	r1, err := parseIntParam("r1")
-	if err != nil {
-		utils.WithError(w, fmt.Errorf("%w: invalid r1 parameter: %w", utils.ErrUserError, err))
-		return
-	}
-	q2, err := parseIntParam("q2")
-	if err != nil {
-		utils.WithError(w, fmt.Errorf("%w: invalid q2 parameter: %w", utils.ErrUserError, err))
-		return
-	}
-	r2, err := parseIntParam("r2")
-	if err != nil {
-		utils.WithError(w, fmt.Errorf("%w: invalid r2 parameter: %w", utils.ErrUserError, err))
+		utils.WithError(w, fmt.Errorf("%w: invalid request data: %w", utils.ErrUserError, err))
 		return
 	}
 
-	cities, err := g.Database.GetCities(r.Context(), q1, r1, q2, r2)
+	cities, err := g.Database.GetCities(r.Context(), req.Q1, req.R1, req.Q2, req.R2)
 	if err != nil {
 		utils.WithError(w, err)
 		return
