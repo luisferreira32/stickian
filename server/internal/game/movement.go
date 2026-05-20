@@ -197,14 +197,33 @@ func (g *GameService) DeleteMovement(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type GetMovementsRequest struct {
+	CityID    string `json:"cityId"`
+	Direction string `json:"direction"` // "incoming" or "outgoing"
+}
+
+func validGetMovementsRequest(req *GetMovementsRequest) string {
+	if req.CityID == "" {
+		return "cityId is required"
+	}
+	if req.Direction != "incoming" && req.Direction != "outgoing" {
+		return "direction must be 'incoming' or 'outgoing'"
+	}
+	return ""
+}
+
 // GetMovements returns movements for a city. The authenticated user must own the city.
-// Query params:
-//   - cityId (required): the city to query movements for
-//   - direction: "incoming", "outgoing" (default: "outgoing")
 func (g *GameService) GetMovements(w http.ResponseWriter, r *http.Request) {
-	cityID := r.URL.Query().Get("cityId")
-	if cityID == "" {
-		utils.WithError(w, fmt.Errorf("%w: cityId query parameter is required", utils.ErrUserError))
+	req, err := utils.LoadBase64QueryParam[GetMovementsRequest](r)
+	if err != nil {
+		utils.WithError(w, fmt.Errorf("%w: invalid request data: %w", utils.ErrUserError, err))
+		return
+	}
+	if req.Direction == "" {
+		req.Direction = "outgoing"
+	}
+	if errReason := validGetMovementsRequest(&req); errReason != "" {
+		utils.WithError(w, fmt.Errorf("%w: %s", utils.ErrUserError, errReason))
 		return
 	}
 
@@ -214,7 +233,7 @@ func (g *GameService) GetMovements(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	city, err := g.Database.GetCity(r.Context(), cityID)
+	city, err := g.Database.GetCity(r.Context(), req.CityID)
 	if err != nil {
 		utils.WithError(w, err)
 		return
@@ -224,19 +243,14 @@ func (g *GameService) GetMovements(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	direction := r.URL.Query().Get("direction")
-	if direction == "" {
-		direction = "outgoing"
-	}
-
 	var movements []*Movement
-	switch direction {
+	switch req.Direction {
 	case "incoming":
-		movements, err = g.Database.GetIncomingMovements(r.Context(), cityID)
+		movements, err = g.Database.GetIncomingMovements(r.Context(), req.CityID)
 	case "outgoing":
-		movements, err = g.Database.GetOutgoingMovements(r.Context(), cityID)
+		movements, err = g.Database.GetOutgoingMovements(r.Context(), req.CityID)
 	default:
-		utils.WithError(w, fmt.Errorf("%w: direction must be 'incoming' or 'outgoing'", utils.ErrUserError))
+		utils.WithError(w, fmt.Errorf("unexpected direction: %v", req.Direction))
 		return
 	}
 	if err != nil {

@@ -175,7 +175,7 @@ func Test_GetCities(t *testing.T) {
 	}{
 		{
 			name:    "success",
-			query:   "q1=0&r1=0&q2=10&r2=10",
+			query:   "data=eyJxMSI6MCwgInIxIjowLCAicTIiOjEwLCAicjIiOjEwfQo=", // base64 for {"q1":0, "r1":0, "q2":10, "r2":10}
 			mockRes: []*City{city1, city2},
 			wantQ1:  0, wantR1: 0, wantQ2: 10, wantR2: 10,
 			wantStatus: 200,
@@ -183,20 +183,20 @@ func Test_GetCities(t *testing.T) {
 		},
 		{
 			name:       "empty result",
-			query:      "q1=0&r1=0&q2=1&r2=1",
+			query:      "data=eyJxMSI6MCwgInIxIjowLCAicTIiOjAsICJyMiI6MH0K", // base64 for {"q1":0, "r1":0, "q2":0, "r2":0}
 			mockRes:    nil,
 			wantStatus: 200,
 			wantBody:   unsafeToResponseBody([]*City(nil)),
 		},
 		{
 			name:       "missing parameter",
-			query:      "q1=0&r1=0&q2=10",
+			query:      "data=",
 			wantStatus: 400,
-			wantBody:   []byte("user error: invalid r2 parameter: missing required parameter: r2\n"),
+			wantBody:   []byte("user error: invalid request data: missing query parameter data\n"),
 		},
 		{
 			name:       "database error",
-			query:      "q1=0&r1=0&q2=10&r2=10",
+			query:      "data=eyJxMSI6MCwgInIxIjowLCAicTIiOjAsICJyMiI6MH0K", // base64 for {"q1":0, "r1":0, "q2":0, "r2":0}
 			mockErr:    errors.New("a database error"),
 			wantStatus: 500,
 			wantBody:   []byte("a database error\n"),
@@ -224,12 +224,8 @@ func Test_GetCities(t *testing.T) {
 			service.GetCities(rec, req)
 
 			// then
-			if testcase.mockErr == nil && testcase.query != "q1=0&r1=0&q2=1&r2=1" {
-				if gotQ1 != testcase.wantQ1 || gotR1 != testcase.wantR1 || gotQ2 != testcase.wantQ2 || gotR2 != testcase.wantR2 {
-					t.Errorf("unexpected coords: want (%v,%v,%v,%v), got (%v,%v,%v,%v)",
-						testcase.wantQ1, testcase.wantR1, testcase.wantQ2, testcase.wantR2,
-						gotQ1, gotR1, gotQ2, gotR2)
-				}
+			if gotQ1 != testcase.wantQ1 || gotR1 != testcase.wantR1 || gotQ2 != testcase.wantQ2 || gotR2 != testcase.wantR2 {
+				t.Errorf("unexpected coords: want (%v,%v,%v,%v), got (%v,%v,%v,%v)", testcase.wantQ1, testcase.wantR1, testcase.wantQ2, testcase.wantR2, gotQ1, gotR1, gotQ2, gotR2)
 			}
 			if testcase.wantStatus != rec.Code {
 				t.Errorf("unexpected status code: want %v, got %v", testcase.wantStatus, rec.Code)
@@ -245,30 +241,30 @@ func Test_FoundCity(t *testing.T) {
 	tile := &MapTile{Q: 3, R: 7, Biome: 2}
 
 	testcases := []struct {
-		name            string
-		body            string
-		tileRes         *MapTile
-		tileErr         error
-		createErr       error
-		wantStatus      int
-		wantBody        []byte
-		wantCityHall    int
-		wantResources   *Resources
+		name          string
+		body          string
+		tileRes       *MapTile
+		tileErr       error
+		createErr     error
+		wantStatus    int
+		wantBody      []byte
+		wantCityHall  int
+		wantResources *Resources
 	}{
 		{
-			name:         "success with resources",
-			body:         `{"cityName":"New Town","q":3,"r":7,"food":50,"sticks":30,"stones":20,"gems":5}`,
-			tileRes:      tile,
-			wantStatus:   200,
-			wantCityHall: 1,
+			name:          "success with resources",
+			body:          `{"cityName":"New Town","q":3,"r":7,"food":50,"sticks":30,"stones":20,"gems":5}`,
+			tileRes:       tile,
+			wantStatus:    200,
+			wantCityHall:  1,
 			wantResources: &Resources{Food: 50, Sticks: 30, Stones: 20, Gems: 5},
 		},
 		{
-			name:         "success without resources",
-			body:         `{"cityName":"New Town","q":3,"r":7}`,
-			tileRes:      tile,
-			wantStatus:   200,
-			wantCityHall: 1,
+			name:          "success without resources",
+			body:          `{"cityName":"New Town","q":3,"r":7}`,
+			tileRes:       tile,
+			wantStatus:    200,
+			wantCityHall:  1,
 			wantResources: &Resources{},
 		},
 		{
