@@ -16,6 +16,7 @@ import (
 func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey string, development bool) error {
 	middlewares := []func(http.HandlerFunc) http.HandlerFunc{
 		panicMiddleware(), // always chain the panic middleware first to prevent panics in other middlewares from crashing the server
+		base64BodyMiddleware(),
 		authMiddleware(secretKey),
 	}
 	if development {

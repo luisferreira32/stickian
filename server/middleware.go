@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
+	"io"
 	"log"
 	"mime"
 	"net/http"
@@ -76,6 +79,31 @@ func compressionMiddleware() func(http.HandlerFunc) http.HandlerFunc {
 			// serve uncompressed file
 			f(w, r)
 		})
+	}
+}
+
+// base64BodyMiddleware decodes a base64-encoded request body before passing it to the handler.
+// Requests without a body (GET, DELETE, etc.) are passed through unchanged.
+func base64BodyMiddleware() func(http.HandlerFunc) http.HandlerFunc {
+	return func(f http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if r.Body != nil && r.Body != http.NoBody && r.ContentLength != 0 {
+				encoded, err := io.ReadAll(r.Body)
+				_ = r.Body.Close()
+				if err != nil {
+					http.Error(w, "failed to read request body", http.StatusBadRequest)
+					return
+				}
+				decoded, err := base64.StdEncoding.DecodeString(string(encoded))
+				if err != nil {
+					http.Error(w, "request body must be base64 encoded", http.StatusBadRequest)
+					return
+				}
+				r.Body = io.NopCloser(bytes.NewReader(decoded))
+				r.ContentLength = int64(len(decoded))
+			}
+			f(w, r)
+		}
 	}
 }
 
