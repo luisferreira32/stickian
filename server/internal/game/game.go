@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/luisferreira32/stickian/server/internal/utils"
 )
@@ -37,6 +38,8 @@ var (
 
 type GameService struct {
 	Database GameDatabase
+	// TickDuration is the cadence at which the game loop drains due events.
+	TickDuration time.Duration
 
 	settleLock sync.Mutex
 }

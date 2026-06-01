@@ -8,7 +8,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func runMigrations(migrationsURL, databaseURL string) error {
@@ -30,10 +30,10 @@ func runMigrations(migrationsURL, databaseURL string) error {
 	return nil
 }
 
-func newDatabaseConnection(ctx context.Context, databaseURL string) (*pgx.Conn, error) {
-	conn, err := pgx.Connect(ctx, databaseURL)
+func newDatabaseConnection(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	return conn, nil
+	return pool, nil
 }

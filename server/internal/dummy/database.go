@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type DummyDatabase interface {
@@ -22,7 +22,7 @@ type DummyDatabase interface {
 // It does not do anything in the dummy module since there is no actual logic behind it,
 // but serves as an example of how the database interface could be implemented for the game.
 type PosgresDatabase struct {
-	DB *pgx.Conn
+	DB *pgxpool.Pool
 }
 
 func (db *PosgresDatabase) AddEvent(event Event, timestamp int64) error {

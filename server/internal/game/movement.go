@@ -43,6 +43,12 @@ type CreateMovementRequest struct {
 	Resources   *MaterialResources `json:"resources,omitempty"`
 }
 
+// CreateMovementResponse is returned with 202 Accepted. The movement is created
+// asynchronously by the game loop; the id lets the client track it via GetMovements.
+type CreateMovementResponse struct {
+	ID string `json:"id"`
+}
+
 func validCreateMovementRequest(req *CreateMovementRequest) string {
 	if req == nil {
 		return "must provide a valid request"
@@ -118,14 +124,29 @@ func (g *GameService) CreateMovement(w http.ResponseWriter, r *http.Request) {
 		Resources:   resources,
 	}
 
-	if err := g.Database.CreateMovement(r.Context(), m); err != nil {
+	payload, err := json.Marshal(CreateMovementPayload{Movement: m, PlayerID: userID})
+	if err != nil {
+		utils.WithError(w, fmt.Errorf("failed to encode event payload: %w", err))
+		return
+	}
+	event := &Event{
+		Key:          "create:" + m.ID,
+		Type:         EventCreateMovement,
+		ProcessAfter: time.Now(),
+		Payload:      payload,
+	}
+	if err := g.Database.AddEvent(r.Context(), event); err != nil {
 		utils.WithError(w, err)
 		return
 	}
 
-	utils.WithDefaultOKHeaders(w)
-	if err := json.NewEncoder(w).Encode(m); err != nil {
-		utils.WithError(w, fmt.Errorf("failed to encode movement: %w", err))
+	// the movement is written by the game loop, not here; respond 202 with the
+	// pre-generated id so the client can track the pending movement via GetMovements
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusAccepted)
+	if err := json.NewEncoder(w).Encode(CreateMovementResponse{ID: m.ID}); err != nil {
+		utils.WithError(w, fmt.Errorf("failed to encode response: %w", err))
 		return
 	}
 }
@@ -189,12 +210,24 @@ func (g *GameService) DeleteMovement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := g.Database.DeleteMovement(r.Context(), id); err != nil {
+	payload, err := json.Marshal(CancelMovementPayload{MovementID: id, PlayerID: userID})
+	if err != nil {
+		utils.WithError(w, fmt.Errorf("failed to encode event payload: %w", err))
+		return
+	}
+	event := &Event{
+		Key:          "cancel:" + id,
+		Type:         EventCancelMovement,
+		ProcessAfter: time.Now(),
+		Payload:      payload,
+	}
+	if err := g.Database.AddEvent(r.Context(), event); err != nil {
 		utils.WithError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	// the movement is removed by the game loop, not here
+	w.WriteHeader(http.StatusAccepted)
 }
 
 type GetMovementsRequest struct {
