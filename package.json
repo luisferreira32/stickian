@@ -29,9 +29,9 @@
     "vite": "^7.3.3"
   },
   "packageManager": "pnpm@11.1.3",
-  "allowBuilds": [
-    "esbuild"
-  ],
+  "allowBuilds": {
+    "esbuild": true
+  },
   "prettier": {
     "semi": false,
     "singleQuote": true,
