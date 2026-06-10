@@ -3,13 +3,8 @@ RUN corepack enable
 WORKDIR /app
 
 # install dependencies
-<<<<<<< HEAD
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .
 RUN pnpm install --frozen-lockfile 
-=======
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install
->>>>>>> 722c19a (trying to fix pnpm build error)
 
 # copy all sources
 COPY web/ web/
