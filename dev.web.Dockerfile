@@ -9,7 +9,7 @@ RUN pnpm install --frozen-lockfile
 # copy all sources
 COPY web/ web/
 COPY public/ public/
-COPY index.html vite.config.ts tsconfig.app.json tsconfig.json tsconfig.node.json .
+COPY index.html vite.config.ts tsconfig.app.json tsconfig.json tsconfig.node.json ./
 
 EXPOSE 5173
 CMD ["pnpm", "run", "dev", "--host"]

@@ -31,15 +31,14 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %v", err)
 	}
-	defer func() {
-		if err := db.Close(ctx); err != nil {
-			log.Printf("failed to close database connection: %v", err)
-		}
-	}()
+	defer db.Close()
 
 	mux := http.NewServeMux()
 	var gameDB game.GameDatabase = &game.PostgresDatabase{DB: db}
-	gameSvc := &game.GameService{Database: gameDB}
+	gameSvc := &game.GameService{
+		Database:     gameDB,
+		TickDuration: time.Second, // 1s
+	}
 	userSvc := &user.UserService{
 		SecretKey:   secretKey,
 		Database:    &user.PostgresDatabase{DB: db},
@@ -51,6 +50,7 @@ func run(ctx context.Context, address, databaseURL, migrationsURL, secretKey str
 		DummyDatabase2: &dummy.InMemoryDatabase{EventQueue: make(map[int64][]dummy.Event)},
 	}
 	go dummySvc.Run(ctx)
+	go gameSvc.Run(ctx)
 
 	// define all endpoints
 	// serve static files for the client app

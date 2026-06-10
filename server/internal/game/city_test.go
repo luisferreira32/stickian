@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -26,6 +27,9 @@ type mockDatabase struct {
 	GetOutgoingMovementsFunc func(cityID string) ([]*Movement, error)
 	GetIncomingMovementsFunc func(cityID string) ([]*Movement, error)
 	DeleteMovementFunc       func(id string) error
+	AddEventFunc             func(e *Event) error
+	GetDueEventsFunc         func(now time.Time) ([]*Event, error)
+	MarkEventProcessedFunc   func(seq int64) error
 }
 
 func (db *mockDatabase) GetCity(_ context.Context, id string) (*City, error) {
@@ -70,6 +74,18 @@ func (db *mockDatabase) GetIncomingMovements(_ context.Context, cityID string) (
 
 func (db *mockDatabase) DeleteMovement(_ context.Context, id string) error {
 	return db.DeleteMovementFunc(id)
+}
+
+func (db *mockDatabase) AddEvent(_ context.Context, e *Event) error {
+	return db.AddEventFunc(e)
+}
+
+func (db *mockDatabase) GetDueEvents(_ context.Context, now time.Time) ([]*Event, error) {
+	return db.GetDueEventsFunc(now)
+}
+
+func (db *mockDatabase) MarkEventProcessed(_ context.Context, seq int64) error {
+	return db.MarkEventProcessedFunc(seq)
 }
 
 func makeCity(opts ...func(*City)) *City {

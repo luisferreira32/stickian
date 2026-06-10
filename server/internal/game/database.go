@@ -2,10 +2,13 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/luisferreira32/stickian/server/internal/utils"
 )
 
@@ -27,10 +30,13 @@ type GameDatabase interface {
 	GetOutgoingMovements(ctx context.Context, cityID string) ([]*Movement, error)
 	GetIncomingMovements(ctx context.Context, cityID string) ([]*Movement, error)
 	DeleteMovement(ctx context.Context, id string) error
+	AddEvent(ctx context.Context, e *Event) error
+	GetDueEvents(ctx context.Context, now time.Time) ([]*Event, error)
+	MarkEventProcessed(ctx context.Context, seq int64) error
 }
 
 type PostgresDatabase struct {
-	DB *pgx.Conn
+	DB *pgxpool.Pool
 }
 
 const getCityQuery = `SELECT
@@ -296,7 +302,8 @@ const createMovementQuery = `INSERT INTO movement
 	(id, city_from, city_to, type, arrival_time,
 	 swordsmen, archers, cavalry, ships, spies,
 	 food, sticks, stones, gems)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+	ON CONFLICT (id) DO NOTHING`
 
 func (db *PostgresDatabase) CreateMovement(ctx context.Context, m *Movement) error {
 	_, err := db.DB.Exec(ctx, createMovementQuery,
@@ -393,4 +400,58 @@ func (db *PostgresDatabase) scanMovements(ctx context.Context, query, cityID str
 		movements = append(movements, m)
 	}
 	return movements, nil
+}
+
+const addEventQuery = `INSERT INTO game_event (key, type, process_after, payload)
+	VALUES ($1, $2, $3, $4)
+	ON CONFLICT (key) DO NOTHING`
+
+// AddEvent enqueues an event. The key uniqueness makes the enqueue idempotent:
+// a duplicate request with the same key is silently ignored.
+func (db *PostgresDatabase) AddEvent(ctx context.Context, e *Event) error {
+	// pass the payload as a string so Postgres casts it to jsonb
+	_, err := db.DB.Exec(ctx, addEventQuery, e.Key, string(e.Type), e.ProcessAfter, string(e.Payload))
+	if err != nil {
+		return fmt.Errorf("add event: %w", err)
+	}
+	return nil
+}
+
+const getDueEventsQuery = `SELECT seq, key, type, process_after, payload
+	FROM game_event
+	WHERE processed_at IS NULL AND process_after <= $1
+	ORDER BY process_after, seq`
+
+// GetDueEvents returns all unprocessed events due at or before now, in the
+// deterministic processing order (process_after, then seq).
+func (db *PostgresDatabase) GetDueEvents(ctx context.Context, now time.Time) ([]*Event, error) {
+	rows, err := db.DB.Query(ctx, getDueEventsQuery, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []*Event
+	for rows.Next() {
+		e := &Event{}
+		var typ string
+		var payload []byte
+		if err := rows.Scan(&e.Seq, &e.Key, &typ, &e.ProcessAfter, &payload); err != nil {
+			return nil, err
+		}
+		e.Type = EventType(typ)
+		e.Payload = json.RawMessage(payload)
+		events = append(events, e)
+	}
+	return events, rows.Err()
+}
+
+const markEventProcessedQuery = `UPDATE game_event SET processed_at = now() WHERE seq = $1`
+
+func (db *PostgresDatabase) MarkEventProcessed(ctx context.Context, seq int64) error {
+	_, err := db.DB.Exec(ctx, markEventProcessedQuery, seq)
+	if err != nil {
+		return fmt.Errorf("mark event processed: %w", err)
+	}
+	return nil
 }

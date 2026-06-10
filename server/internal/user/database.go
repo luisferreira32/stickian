@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
@@ -18,7 +19,7 @@ type UserDatabase interface {
 }
 
 type PostgresDatabase struct {
-	DB *pgx.Conn
+	DB *pgxpool.Pool
 }
 
 const writeUserQuery = "INSERT INTO users (id, email, validated_email, username, hashed_password) VALUES ($1, $2, $3, $4, $5)"
